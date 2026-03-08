@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEETONA のホーム</title>
+  <meta
+    name="description"
+    content="短いロゴとゲーム棚を組み合わせた、SEETONA のホームページ。"
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet"
+  >
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js"
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="./static/styles.css?v=20260308g">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="#top">
+        <span class="brand-mark"></span>
+        <span class="brand-text">SEETONA</span>
+      </a>
+
+      <div class="header-tools">
+        <nav class="site-nav" data-i18n="navAria" data-i18n-attr="aria-label">
+          <a href="#motion" data-i18n="navMotion">Motion</a>
+          <a href="#signal" data-i18n="navSignal">Signal</a>
+          <a href="#play" data-i18n="navPlay">Games</a>
+          <a href="#launch" data-i18n="navLaunch">Launch</a>
+        </nav>
+
+        <div
+          class="language-switch"
+          role="group"
+          data-i18n="languageGroupLabel"
+          data-i18n-attr="aria-label"
+        >
+          <span class="language-label" data-i18n="languageLabel">LANGUAGE</span>
+          <button type="button" data-language-option="ja">JP</button>
+          <button type="button" data-language-option="en">EN</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy fade-rise">
+          <p class="eyebrow" data-i18n="heroEyebrow">HOME / PLAYGROUND</p>
+          <h1 data-i18n="heroTitle">短いロゴと小さなゲーム棚。</h1>
+          <p class="lead" data-i18n="heroLead">
+            長すぎる見た目は削り、回して触ってすぐ遊べる形に寄せたトップページです。
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#motion" data-i18n="heroPrimaryAction">ロゴを見る</a>
+            <a class="button button-ghost" href="#play" data-i18n="heroSecondaryAction">ゲーム棚へ</a>
+          </div>
+          <ul class="hero-metrics">
+            <li>
+              <strong>01</strong>
+              <span data-i18n="heroMetric1">短い 3D ロゴ</span>
+            </li>
+            <li>
+              <strong>02</strong>
+              <span data-i18n="heroMetric2">上下左右に 360 度回転</span>
+            </li>
+            <li>
+              <strong>03</strong>
+              <span data-i18n="heroMetric3">ゲームを棚から選べる</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="hero-scene fade-rise" id="motion">
+          <div class="scene-card">
+            <div class="scene-meta">
+              <div class="scene-badge" data-i18n="sceneBadge">FREE ROTATION</div>
+              <div class="scene-note" data-i18n="sceneNote">drag / swipe / spin</div>
+            </div>
+            <div class="orbit-stage" id="orbit-stage">
+              <canvas
+                id="seeton-canvas"
+                role="img"
+                data-i18n="orbitAria"
+                data-i18n-attr="aria-label"
+                aria-label="自由に回転する短い立体ロゴ"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="signal-grid" id="signal">
+        <div class="section-head">
+          <p class="panel-label" data-i18n="signalSectionLabel">SIGNAL</p>
+          <h2 data-i18n="signalSectionTitle">やることを先に見せる。</h2>
+          <p class="section-copy" data-i18n="signalSectionBody">
+            ロゴ、棚、ゲーム本体の順で視線が落ちるようにして、遊びたい人が迷わない構成にしています。
+          </p>
+        </div>
+
+        <article class="signal-card">
+          <p class="panel-label" data-i18n="signalCard1Label">LOGO</p>
+          <h3 data-i18n="signalCard1Title">横に伸びすぎない</h3>
+          <p data-i18n="signalCard1Body">
+            文字数を絞って、透明な付属物も外したので、最初に見える形が素直です。
+          </p>
+        </article>
+
+        <article class="signal-card">
+          <p class="panel-label" data-i18n="signalCard2Label">GAMES</p>
+          <h3 data-i18n="signalCard2Title">棚から選ぶ</h3>
+          <p data-i18n="signalCard2Body">
+            マインスイーパーを主役にしつつ、次の候補も同じ棚に並べて全体像を見せます。
+          </p>
+        </article>
+
+        <article class="signal-card">
+          <p class="panel-label" data-i18n="signalCard3Label">LOAD</p>
+          <h3 data-i18n="signalCard3Title">待ち時間を見せる</h3>
+          <p data-i18n="signalCard3Body">
+            Python 側の処理が終わるまで、読み込み表示を出して状態を明確にします。
+          </p>
+        </article>
+      </section>
+
+      <section class="game-hub" id="play">
+        <div class="section-head play-head">
+          <p class="panel-label" data-i18n="playSectionLabel">GAME SHELF</p>
+          <h2 data-i18n="playSectionTitle">たくさんあるゲームから選ぶ。</h2>
+          <p class="section-copy" data-i18n="playSectionBody">
+            まずは小さいマインスイーパーを遊べる状態にして、テトリスとソリティアは予告として並べています。
+          </p>
+        </div>
+
+        <div class="game-library" data-i18n="gameLibraryAria" data-i18n-attr="aria-label">
+          <button
+            type="button"
+            class="game-select-card is-selected"
+            data-game-select="minesweeper"
+            aria-pressed="true"
+          >
+            <span class="game-chip live" data-i18n="gameMinesChip">PLAYABLE</span>
+            <div class="thumb thumb-minesweeper" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+              <span></span><span class="is-open n1">1</span><span class="is-open n2">2</span><span></span><span></span>
+              <span></span><span class="is-flag">!</span><span class="is-open n3">3</span><span></span><span></span>
+              <span></span><span></span><span class="is-open n1">1</span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <strong data-i18n="gameMinesTitle">マインスイーパー</strong>
+            <p data-i18n="gameMinesBody">小さい盤面でさっと遊べる、今すぐ起動できるゲーム。</p>
+          </button>
+
+          <button
+            type="button"
+            class="game-select-card"
+            data-game-select="tetris"
+            aria-pressed="false"
+          >
+            <span class="game-chip soon" data-i18n="gameTetrisChip">COMING SOON</span>
+            <div class="thumb thumb-tetris" aria-hidden="true">
+              <span class="block a"></span>
+              <span class="block a"></span>
+              <span class="block a"></span>
+              <span class="block a"></span>
+              <span class="block b"></span>
+              <span class="block b"></span>
+              <span class="block b"></span>
+              <span class="block c"></span>
+              <span class="block c"></span>
+              <span class="block c"></span>
+            </div>
+            <strong data-i18n="gameTetrisTitle">テトリス</strong>
+            <p data-i18n="gameTetrisBody">落ち物枠。棚には置いておいて、実装は次段階で入れる。</p>
+          </button>
+
+          <button
+            type="button"
+            class="game-select-card"
+            data-game-select="solitaire"
+            aria-pressed="false"
+          >
+            <span class="game-chip soon" data-i18n="gameSolitaireChip">COMING SOON</span>
+            <div class="thumb thumb-solitaire" aria-hidden="true">
+              <span class="card back"></span>
+              <span class="card front"></span>
+              <span class="card front top"></span>
+            </div>
+            <strong data-i18n="gameSolitaireTitle">ソリティア</strong>
+            <p data-i18n="gameSolitaireBody">落ち着いた一人遊び枠。後から入れても相性がいい。</p>
+          </button>
+        </div>
+
+        <section class="active-game-shell">
+          <div class="active-game-head">
+            <div>
+              <p class="panel-label" data-i18n="gamePanelLabel">NOW PLAYING</p>
+              <h3 id="selected-game-title">マインスイーパー</h3>
+              <p id="selected-game-copy" class="selected-game-copy">
+                小さい盤面でさっと遊べる、今すぐ起動できるゲーム。
+              </p>
+            </div>
+            <span id="selected-game-badge" class="game-chip live">PLAYABLE</span>
+          </div>
+
+          <div class="game-toolbar" id="game-toolbar">
+            <div class="toolbar-row">
+              <div class="game-stats">
+                <div class="metric-card">
+                  <span class="metric-label" data-i18n="gameStatusLabel">状態</span>
+                  <strong id="status-text">待機中</strong>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label" data-i18n="gameFlagsLabel">残り旗</span>
+                  <strong id="flags-left">0</strong>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label" data-i18n="gameClearedLabel">クリア</span>
+                  <strong id="cleared-count">0/0</strong>
+                </div>
+              </div>
+
+              <div class="difficulty-cluster" id="difficulty-cluster">
+                <span class="tool-label" data-i18n="gameDifficultyLabel">DIFFICULTY</span>
+                <div class="difficulty-picker">
+                  <button type="button" data-difficulty="easy" class="active" data-i18n="gameDifficultyEasy">小</button>
+                  <button type="button" data-difficulty="medium" data-i18n="gameDifficultyMedium">中</button>
+                  <button type="button" data-difficulty="hard" data-i18n="gameDifficultyHard">大</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="toolbar-row toolbar-notes">
+              <div class="control-copy">
+                <p data-i18n="gameControlReveal">左クリックまたはタップで開く。</p>
+                <p data-i18n="gameControlFlag">右クリックまたは長押しで旗を置く。</p>
+              </div>
+              <div class="game-actions">
+                <button type="button" id="load-game-button" class="button button-primary" data-i18n="gameStart">
+                  ゲームを読み込む
+                </button>
+                <button type="button" id="restart-button" class="button button-ghost" data-i18n="gameRestart">
+                  新しい盤面
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="game-surface">
+            <div class="game-placeholder" id="game-placeholder">
+              <div class="thumb thumb-minesweeper thumb-large" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+                <span></span><span class="is-open n1">1</span><span class="is-open n2">2</span><span></span><span></span>
+                <span></span><span class="is-flag">!</span><span class="is-open n3">3</span><span></span><span></span>
+                <span></span><span></span><span class="is-open n1">1</span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <h4 id="game-placeholder-title">マインスイーパー</h4>
+              <p id="game-placeholder-copy">
+                棚から選んだあとに読み込むと、ここに小さい盤面が出ます。
+              </p>
+            </div>
+
+            <div class="game-loading" id="game-loading" hidden>
+              <span class="loading-spinner"></span>
+              <strong data-i18n="gameLoading">読み込み中...</strong>
+              <p data-i18n="gameLoadingDetail">Python の処理が終わるまで少し待ってください。</p>
+            </div>
+
+            <div class="game-board-wrap" id="game-board-wrap" hidden>
+              <div
+                id="board"
+                class="board"
+                aria-live="polite"
+                data-i18n="gameBoardAria"
+                data-i18n-attr="aria-label"
+                aria-label="マインスイーパーの盤面"
+              ></div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="launch-panel" id="launch">
+        <div class="launch-copy">
+          <p class="panel-label" data-i18n="launchLabel">LAUNCH</p>
+          <h2 data-i18n="launchTitle">今は棚を作って、順番に足す。</h2>
+          <p data-i18n="launchBody">
+            マインスイーパーを先に成立させて、他のゲームは coming soon として並べると、次に何を入れるかが見えやすくなります。
+          </p>
+        </div>
+
+        <ol class="flow-list">
+          <li>
+            <strong>01</strong>
+            <span data-i18n="flow1Label">View</span>
+            <p data-i18n="flow1Body">短いロゴを触って、サイトの空気を掴む。</p>
+          </li>
+          <li>
+            <strong>02</strong>
+            <span data-i18n="flow2Label">Choose</span>
+            <p data-i18n="flow2Body">ゲーム棚から遊びたい要素を選ぶ。</p>
+          </li>
+          <li>
+            <strong>03</strong>
+            <span data-i18n="flow3Label">Play</span>
+            <p data-i18n="flow3Body">読み込み表示を見ながら、遊べる状態まで待てる。</p>
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <p class="panel-label" data-i18n="footerLabel">SEETONA</p>
+        <p class="footer-title" data-i18n="footerTitle">
+          ロゴ、棚、小さいゲームを一つの面にまとめたホーム。
+        </p>
+      </div>
+      <a class="footer-link" href="#top" data-i18n="footerLink">先頭へ戻る</a>
+    </footer>
+  </div>
+
+  <script type="module" src="./static/app.js?v=20260308g"></script>
+</body>
+</html>

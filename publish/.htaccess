@@ -1,0 +1,24 @@
+RewriteEngine On
+
+RewriteCond %{HTTP_HOST} ^setn\.shop$ [NC]
+RewriteRule ^ https://www.setn.shop%{REQUEST_URI} [R=301,L]
+
+RewriteCond %{HTTP_HOST} ^seetona\.com$ [NC]
+RewriteRule ^ https://www.seetona.com%{REQUEST_URI} [R=301,L]
+
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP_HOST} ^(www\.setn\.shop|www\.seetona\.com)$ [NC]
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+DirectoryIndex app.xcg index.html
+
+<FilesMatch "^(README\.md|Dockerfile|app\.py|app_core\.py|minesweeper\.py|__init__\.py)$">
+  Require all denied
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+RedirectMatch 404 ^/tests/
+RedirectMatch 404 ^/__pycache__/
+RedirectMatch 404 ^/runtime/
