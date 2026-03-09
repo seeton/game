@@ -1,8 +1,11 @@
+import datetime as dt
+import hashlib
 import json
+import math
 import os
 import time
 import uuid
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -14,11 +17,11 @@ DEFAULT_DURATION = 60
 DEFAULT_PAYOUT_RATE = Decimal("0.85")
 MIN_STAKE = 1_000
 MAX_HISTORY_ITEMS = 12
-QUOTE_CACHE_TTL_SECONDS = 10
-STALE_CACHE_MAX_AGE_SECONDS = 300
-TWELVE_DATA_KEY_ENV = "TWELVEDATA_API_KEY"
-ALLOW_DELAYED_TRADING_ENV = "BINARY_SIM_ALLOW_DELAYED_QUOTES"
-QUOTE_CACHE_DIRNAME = "quote_cache"
+CASE_TOTAL_SECONDS = 180
+CASE_SEGMENTS = 6
+HISTORY_LOOKBACK_DAYS = 45
+JST_OFFSET = dt.timedelta(hours=9)
+CASE_CACHE_DIRNAME = "binary_case_cache"
 
 SYMBOLS = {
     "USD/JPY": {"base": "USD", "quote": "JPY", "digits": 3},
@@ -36,15 +39,12 @@ def _quantize_pattern(digits):
 
 def _format_price(symbol, price):
     digits = SYMBOLS[symbol]["digits"]
-    return format(price.quantize(_quantize_pattern(digits)), "f")
-
-
-def _format_timestamp(epoch_seconds):
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(epoch_seconds)))
+    decimal_price = Decimal(str(price))
+    return format(decimal_price.quantize(_quantize_pattern(digits)), "f")
 
 
 def _cache_dir(runtime_dir):
-    return os.path.join(runtime_dir, QUOTE_CACHE_DIRNAME)
+    return os.path.join(runtime_dir, CASE_CACHE_DIRNAME)
 
 
 def ensure_runtime_dirs(runtime_dir):
@@ -53,153 +53,205 @@ def ensure_runtime_dirs(runtime_dir):
         os.makedirs(directory)
 
 
-def _cache_path(runtime_dir, symbol):
-    safe_symbol = symbol.replace("/", "_")
-    return os.path.join(_cache_dir(runtime_dir), "%s.json" % safe_symbol)
+def _cache_path(runtime_dir, day_key):
+    return os.path.join(_cache_dir(runtime_dir), "%s.json" % day_key)
 
 
-def _read_cache(runtime_dir, symbol):
-    path = _cache_path(runtime_dir, symbol)
+def _load_cached_cases(runtime_dir, day_key):
+    path = _cache_path(runtime_dir, day_key)
     if not os.path.isfile(path):
         return None
     with open(path, "r", encoding="utf-8") as handle:
         return json.load(handle)
 
 
-def _write_cache(runtime_dir, symbol, payload):
-    ensure_runtime_dirs(runtime_dir)
-    path = _cache_path(runtime_dir, symbol)
-    temp_path = path + ".tmp"
-    with open(temp_path, "w", encoding="utf-8") as handle:
-        json.dump(payload, handle, separators=(",", ":"))
-    os.replace(temp_path, path)
+def _jst_now(now_epoch=None):
+    now_epoch = time.time() if now_epoch is None else now_epoch
+    return dt.datetime.utcfromtimestamp(now_epoch) + JST_OFFSET
+
+
+def _today_key(now_epoch=None):
+    return _jst_now(now_epoch).date().isoformat()
+
+
+def _yesterday_key(now_epoch=None):
+    return (_jst_now(now_epoch).date() - dt.timedelta(days=1)).isoformat()
+
+
+def _parse_iso_date(value):
+    return dt.datetime.strptime(value, "%Y-%m-%d").date()
 
 
 def _fetch_json(url):
     request = Request(url, headers={"User-Agent": "SEETONA/1.0"})
     try:
-        with urlopen(request, timeout=4) as response:
+        with urlopen(request, timeout=5) as response:
             return json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(body or "quote provider request failed")
+        raise RuntimeError(body or "historical case fetch failed")
     except (URLError, OSError):
-        raise RuntimeError("quote provider request failed")
+        raise RuntimeError("historical case fetch failed")
 
 
-def _twelve_data_quote(symbol):
-    api_key = os.environ.get(TWELVE_DATA_KEY_ENV, "").strip()
-    if not api_key:
-        raise RuntimeError("live fx api key missing")
-
-    payload = _fetch_json(
-        "https://api.twelvedata.com/price?%s"
-        % urlencode({"symbol": symbol, "apikey": api_key})
-    )
-    if payload.get("status") == "error":
-        raise RuntimeError(payload.get("message") or "live fx quote failed")
-
-    try:
-        price = Decimal(str(payload["price"]))
-    except (KeyError, InvalidOperation):
-        raise RuntimeError("live fx quote failed")
-
-    now_epoch = int(time.time())
-    return {
-        "symbol": symbol,
-        "price": float(price),
-        "displayPrice": _format_price(symbol, price),
-        "updatedAt": _format_timestamp(now_epoch),
-        "provider": {
-            "name": "Twelve Data",
-            "code": "live",
-            "noteCode": "binaryProviderLive",
-            "tradingEnabled": True,
-            "stale": False,
-        },
-    }
-
-
-def _frankfurter_quote(symbol):
+def _fetch_daily_series(symbol, end_date):
     config = SYMBOLS[symbol]
+    start_date = end_date - dt.timedelta(days=HISTORY_LOOKBACK_DAYS)
     payload = _fetch_json(
-        "https://api.frankfurter.dev/v1/latest?%s"
-        % urlencode({"base": config["base"], "symbols": config["quote"]})
+        "https://api.frankfurter.dev/v1/%s..%s?%s"
+        % (
+            start_date.isoformat(),
+            end_date.isoformat(),
+            urlencode({"base": config["base"], "symbols": config["quote"]}),
+        )
     )
 
-    try:
-        price = Decimal(str(payload["rates"][config["quote"]]))
-    except (KeyError, InvalidOperation, TypeError):
-        raise RuntimeError("daily fx quote failed")
+    rates = payload.get("rates", {})
+    items = []
+    for day in sorted(rates.keys()):
+        try:
+            price = float(rates[day][config["quote"]])
+        except (KeyError, TypeError, ValueError):
+            continue
+        items.append({"date": day, "price": price})
 
-    trading_enabled = str(os.environ.get(ALLOW_DELAYED_TRADING_ENV, "")).lower() in (
-        "1",
-        "true",
-        "yes",
-        "on",
-    )
-    quote_date = str(payload.get("date", ""))
-    updated_label = "%sT16:00:00Z" % quote_date if quote_date else _format_timestamp(time.time())
+    if len(items) < CASE_SEGMENTS + 1:
+        raise RuntimeError("historical case unavailable")
+    return items
 
+
+def _average_abs_change(anchor_prices):
+    if len(anchor_prices) < 2:
+        return 0.0
+    total = 0.0
+    for index in range(len(anchor_prices) - 1):
+        total += abs(anchor_prices[index + 1] - anchor_prices[index])
+    return total / float(len(anchor_prices) - 1)
+
+
+def _build_series(symbol, anchor_points, day_key):
+    prices = [point["price"] for point in anchor_points]
+    total_segments = len(anchor_points) - 1
+    seconds_per_segment = CASE_TOTAL_SECONDS // total_segments
+    precision_step = 10 ** (-SYMBOLS[symbol]["digits"])
+    average_change = max(_average_abs_change(prices), precision_step * 3)
+    seed_text = "%s:%s:%s" % (day_key, symbol, anchor_points[-1]["date"])
+    seed = int(hashlib.sha1(seed_text.encode("utf-8")).hexdigest()[:8], 16)
+
+    series = [float(_format_price(symbol, prices[0]))]
+    for index in range(total_segments):
+        start_price = prices[index]
+        end_price = prices[index + 1]
+        span = end_price - start_price
+        amplitude = max(abs(span) * 0.38, average_change * 0.16, precision_step * 4)
+        amplitude = min(amplitude, abs(span) + average_change * 0.45)
+        direction = 1 if ((seed >> index) & 1) == 0 else -1
+
+        for second in range(1, seconds_per_segment + 1):
+            progress = second / float(seconds_per_segment)
+            wave = math.sin(math.pi * progress) * amplitude * direction
+            price = start_price + (span * progress) + wave
+            series.append(float(_format_price(symbol, price)))
+
+    return series[: CASE_TOTAL_SECONDS + 1]
+
+
+def _build_case(symbol, history_points, day_key):
+    anchor_points = history_points[-(CASE_SEGMENTS + 1) :]
     return {
         "symbol": symbol,
-        "price": float(price),
-        "displayPrice": _format_price(symbol, price),
-        "updatedAt": updated_label,
-        "provider": {
-            "name": "Frankfurter",
-            "code": "daily",
-            "noteCode": "binaryProviderDailyEnabled" if trading_enabled else "binaryProviderDailyDisabled",
-            "tradingEnabled": trading_enabled,
-            "stale": False,
-        },
+        "title": symbol,
+        "referenceDate": anchor_points[-1]["date"],
+        "anchorDates": [point["date"] for point in anchor_points],
+        "series": _build_series(symbol, anchor_points, day_key),
+        "totalSeconds": CASE_TOTAL_SECONDS,
     }
 
 
-def get_quote(symbol, runtime_dir):
-    if symbol not in SYMBOLS:
-        raise ValueError("unknown symbol")
+def _latest_cached_payload(runtime_dir):
+    ensure_runtime_dirs(runtime_dir)
+    latest_name = None
+    for filename in os.listdir(_cache_dir(runtime_dir)):
+        if filename.endswith(".json") and (latest_name is None or filename > latest_name):
+            latest_name = filename
+    if latest_name is None:
+        return None
+    with open(os.path.join(_cache_dir(runtime_dir), latest_name), "r", encoding="utf-8") as handle:
+        return json.load(handle)
 
-    cached = _read_cache(runtime_dir, symbol)
-    now_epoch = int(time.time())
-    if cached is not None:
-        cache_age = now_epoch - int(cached.get("cachedAt", 0))
-        if cache_age <= QUOTE_CACHE_TTL_SECONDS:
-            return cached["quote"]
 
-    provider_errors = []
-    for fetcher in (_twelve_data_quote, _frankfurter_quote):
-        try:
-            quote = fetcher(symbol)
-            _write_cache(runtime_dir, symbol, {"cachedAt": now_epoch, "quote": quote})
-            return quote
-        except RuntimeError as exc:
-            provider_errors.append(str(exc))
+def load_daily_cases(runtime_dir, now_epoch=None):
+    ensure_runtime_dirs(runtime_dir)
+    day_key = _today_key(now_epoch)
+    path = _cache_path(runtime_dir, day_key)
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as handle:
+            return json.load(handle)
 
-    if cached is not None:
-        cache_age = now_epoch - int(cached.get("cachedAt", 0))
-        if cache_age <= STALE_CACHE_MAX_AGE_SECONDS:
-            cached_quote = dict(cached["quote"])
-            provider = dict(cached_quote.get("provider", {}))
+    try:
+        end_date = _parse_iso_date(_yesterday_key(now_epoch))
+        cases = {}
+        for symbol in SYMBOLS:
+            history_points = _fetch_daily_series(symbol, end_date)
+            cases[symbol] = _build_case(symbol, history_points, day_key)
+        payload = {
+            "dayKey": day_key,
+            "provider": {
+                "name": "Historical Replay",
+                "code": "historical",
+                "noteCode": "binaryProviderHistorical",
+                "tradingEnabled": True,
+                "stale": False,
+            },
+            "cases": cases,
+        }
+        with open(path + ".tmp", "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, separators=(",", ":"))
+        os.replace(path + ".tmp", path)
+        return payload
+    except RuntimeError:
+        cached = _latest_cached_payload(runtime_dir)
+        if cached is not None:
+            provider = dict(cached.get("provider", {}))
             provider["stale"] = True
-            provider["noteCode"] = "binaryProviderStale"
-            cached_quote["provider"] = provider
-            return cached_quote
+            provider["noteCode"] = "binaryProviderHistoricalStale"
+            cached["provider"] = provider
+            return cached
+        raise
 
-    raise RuntimeError(provider_errors[-1] if provider_errors else "fx quote unavailable")
+
+def quote_for_case(case_payload, started_at_epoch, now_epoch, provider):
+    elapsed = max(0, int(now_epoch) - int(started_at_epoch))
+    total_seconds = int(case_payload["totalSeconds"])
+    current_second = min(total_seconds, elapsed)
+    price = float(case_payload["series"][current_second])
+    return {
+        "symbol": case_payload["symbol"],
+        "price": price,
+        "displayPrice": _format_price(case_payload["symbol"], price),
+        "updatedAt": "%sT+%03ds" % (case_payload["referenceDate"], current_second),
+        "elapsedSeconds": current_second,
+        "totalSeconds": total_seconds,
+        "referenceDate": case_payload["referenceDate"],
+        "provider": provider,
+    }
 
 
 class BinarySimulation(object):
-    def __init__(self, balance=STARTING_BALANCE, open_positions=None, history=None):
+    def __init__(self, balance=STARTING_BALANCE, open_positions=None, history=None, case_starts=None, case_day_key=None):
         self.balance = int(balance)
         self.open_positions = list(open_positions or [])
         self.history = list(history or [])
+        self.case_starts = dict(case_starts or {})
+        self.case_day_key = case_day_key
 
     def serialize(self):
         return {
             "balance": self.balance,
             "openPositions": self.open_positions,
             "history": self.history,
+            "caseStarts": self.case_starts,
+            "caseDayKey": self.case_day_key,
         }
 
     @classmethod
@@ -208,11 +260,17 @@ class BinarySimulation(object):
             balance=int(payload.get("balance", STARTING_BALANCE)),
             open_positions=payload.get("openPositions", []),
             history=payload.get("history", []),
+            case_starts=payload.get("caseStarts", {}),
+            case_day_key=payload.get("caseDayKey"),
         )
 
-    def settle_expired(self, quote_lookup, now_epoch=None):
+    def ensure_case_started(self, symbol, now_epoch):
+        if symbol not in self.case_starts:
+            self.case_starts[symbol] = int(now_epoch)
+        return int(self.case_starts[symbol])
+
+    def settle_expired(self, case_lookup, provider, now_epoch=None):
         now_epoch = int(now_epoch or time.time())
-        pending = []
         remaining = []
         for position in self.open_positions:
             expires_at = int(position["expiresAt"])
@@ -220,23 +278,20 @@ class BinarySimulation(object):
                 remaining.append(position)
                 continue
 
-            try:
-                quote = quote_lookup(position["symbol"])
-            except RuntimeError:
-                remaining.append(position)
-                pending.append("binarySettlementPending")
-                continue
+            case_payload = case_lookup(position["symbol"])
+            started_at = self.ensure_case_started(position["symbol"], int(position["openedAt"]))
+            exit_quote = quote_for_case(case_payload, started_at, expires_at, provider)
 
             entry_price = Decimal(str(position["entryPrice"]))
-            exit_price = Decimal(str(quote["price"]))
+            exit_price = Decimal(str(exit_quote["price"]))
             result = _resolve_result(position["direction"], entry_price, exit_price)
             stake = int(position["stake"])
 
             if result == "won":
                 payout = int(
-                    (
-                        Decimal(stake) * (Decimal("1.0") + DEFAULT_PAYOUT_RATE)
-                    ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+                    (Decimal(stake) * (Decimal("1.0") + DEFAULT_PAYOUT_RATE)).quantize(
+                        Decimal("1"), rounding=ROUND_HALF_UP
+                    )
                 )
             elif result == "draw":
                 payout = stake
@@ -251,15 +306,14 @@ class BinarySimulation(object):
                     "result": result,
                     "payout": payout,
                     "profit": payout - stake,
-                    "exitPrice": _format_price(position["symbol"], exit_price),
-                    "settledAt": now_epoch,
+                    "exitPrice": exit_quote["displayPrice"],
+                    "settledAt": expires_at,
                 }
             )
             self.history.insert(0, history_item)
 
         self.open_positions = remaining
         self.history = self.history[:MAX_HISTORY_ITEMS]
-        return pending
 
     def place_trade(self, symbol, direction, stake, duration, quote, now_epoch=None):
         now_epoch = int(now_epoch or time.time())
@@ -273,9 +327,8 @@ class BinarySimulation(object):
             raise ValueError("stake too small")
         if stake > self.balance:
             raise ValueError("insufficient balance")
-        if not bool(quote.get("provider", {}).get("tradingEnabled")):
-            raise ValueError("live quote required")
 
+        self.ensure_case_started(symbol, now_epoch)
         position = {
             "id": uuid.uuid4().hex[:12],
             "symbol": symbol,
@@ -290,7 +343,7 @@ class BinarySimulation(object):
         self.open_positions.insert(0, position)
         return position
 
-    def to_public_state(self, selected_symbol, current_quote, notices=None, now_epoch=None):
+    def to_public_state(self, selected_symbol, cases_payload, current_quote, notices=None, now_epoch=None):
         now_epoch = int(now_epoch or time.time())
         public_open_positions = []
         for position in sorted(self.open_positions, key=lambda item: int(item["expiresAt"])):
@@ -324,14 +377,8 @@ class BinarySimulation(object):
                 }
             )
 
-        provider = current_quote.get("provider") if current_quote else {
-            "name": "Unavailable",
-            "code": "unavailable",
-            "noteCode": "binaryProviderUnavailable",
-            "tradingEnabled": False,
-            "stale": False,
-        }
-
+        selected_case = cases_payload["cases"][selected_symbol]
+        case_started_at = self.ensure_case_started(selected_symbol, now_epoch)
         return {
             "balance": self.balance,
             "startingBalance": STARTING_BALANCE,
@@ -343,11 +390,19 @@ class BinarySimulation(object):
             "minStake": MIN_STAKE,
             "payoutRate": float(DEFAULT_PAYOUT_RATE),
             "quote": current_quote,
-            "provider": provider,
-            "tradingEnabled": bool(provider.get("tradingEnabled")),
+            "provider": dict(cases_payload["provider"]),
+            "tradingEnabled": True,
             "notices": list(dict.fromkeys(notices or [])),
             "openPositions": public_open_positions,
             "history": public_history,
+            "caseInfo": {
+                "symbol": selected_symbol,
+                "referenceDate": selected_case["referenceDate"],
+                "startedAt": case_started_at,
+                "elapsedSeconds": int(current_quote["elapsedSeconds"]),
+                "totalSeconds": int(selected_case["totalSeconds"]),
+                "completed": int(current_quote["elapsedSeconds"]) >= int(selected_case["totalSeconds"]),
+            },
         }
 
 
@@ -361,30 +416,41 @@ def _resolve_result(direction, entry_price, exit_price):
 
 def build_public_state(simulation, selected_symbol, runtime_dir, now_epoch=None):
     now_epoch = int(now_epoch or time.time())
+    cases_payload = load_daily_cases(runtime_dir, now_epoch=now_epoch)
     selected_symbol = selected_symbol if selected_symbol in SYMBOLS else DEFAULT_SYMBOL
-    notices = []
-    quote_cache = {}
+    provider = dict(cases_payload["provider"])
+    current_day_key = cases_payload["dayKey"]
 
-    def quote_lookup(symbol):
-        if symbol not in quote_cache:
-            quote_cache[symbol] = get_quote(symbol, runtime_dir)
-        return quote_cache[symbol]
+    if simulation.case_day_key and simulation.case_day_key != current_day_key:
+        previous_cases = _load_cached_cases(runtime_dir, simulation.case_day_key)
+        if previous_cases is not None and simulation.open_positions:
+            simulation.settle_expired(
+                lambda symbol: previous_cases["cases"][symbol],
+                dict(previous_cases.get("provider", provider)),
+                now_epoch=now_epoch,
+            )
+        else:
+            simulation.open_positions = []
+        simulation.case_starts = {}
 
-    notices.extend(simulation.settle_expired(quote_lookup, now_epoch=now_epoch))
+    simulation.case_day_key = current_day_key
 
-    current_quote = None
-    try:
-        current_quote = quote_lookup(selected_symbol)
-    except RuntimeError:
-        notices.append("binaryProviderUnavailable")
+    def case_lookup(symbol):
+        return cases_payload["cases"][symbol]
 
-    if current_quote is not None:
-        note_code = current_quote.get("provider", {}).get("noteCode")
-        if note_code:
-            notices.append(note_code)
+    simulation.ensure_case_started(selected_symbol, now_epoch)
+    simulation.settle_expired(case_lookup, provider, now_epoch=now_epoch)
+    current_quote = quote_for_case(
+        case_lookup(selected_symbol),
+        simulation.ensure_case_started(selected_symbol, now_epoch),
+        now_epoch,
+        provider,
+    )
 
+    notices = [provider.get("noteCode", "binaryProviderHistorical")]
     return simulation.to_public_state(
         selected_symbol,
+        cases_payload,
         current_quote,
         notices=notices,
         now_epoch=now_epoch,

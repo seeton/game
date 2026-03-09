@@ -1,6 +1,8 @@
 import os
 import sys
 import unittest
+from io import BytesIO
+from unittest import mock
 
 TEST_ROOT = os.path.dirname(os.path.abspath(__file__))
 PUBLISH_ROOT = os.path.dirname(TEST_ROOT)
@@ -12,7 +14,7 @@ from app_core import application, make_cookie_header
 
 
 class AppCoreTests(unittest.TestCase):
-    def run_application(self, path: str):
+    def run_application(self, path: str, query_string: str = ""):
         captured = {}
 
         def start_response(status, headers):
@@ -24,8 +26,8 @@ class AppCoreTests(unittest.TestCase):
                 {
                     "PATH_INFO": path,
                     "REQUEST_METHOD": "GET",
-                    "QUERY_STRING": "",
-                    "wsgi.input": None,
+                    "QUERY_STRING": query_string,
+                    "wsgi.input": BytesIO(b""),
                 },
                 start_response,
             )
@@ -56,7 +58,15 @@ class AppCoreTests(unittest.TestCase):
         status, _, body = self.run_application("/")
         self.assertTrue(status.startswith("200"))
         self.assertIn(b'./static/styles.css', body)
-        self.assertIn(b'./static/app.js?v=20260309a', body)
+        self.assertIn(b'./static/app.js?v=20260309b', body)
+
+    def test_binary_state_returns_json_error_when_case_build_fails(self) -> None:
+        with mock.patch("app_core.build_binary_public_state", side_effect=RuntimeError("historical case fetch failed")):
+            status, headers, body = self.run_application("/app.xcg", "action=binary_state&symbol=USD/JPY")
+
+        self.assertTrue(status.startswith("502"))
+        self.assertEqual(headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertIn(b'"error": "historical case fetch failed"', body)
 
 
 if __name__ == "__main__":

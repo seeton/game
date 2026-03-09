@@ -10,7 +10,7 @@ const DEFAULT_BINARY_DURATION = 60;
 const DEFAULT_BINARY_STAKE = 10_000;
 const BINARY_STAKE_PRESETS = [5_000, 10_000, 30_000, 50_000];
 const LANGUAGE_STORAGE_KEY = "seetona-language";
-const BINARY_POLL_MS = 5_000;
+const BINARY_POLL_MS = 1_000;
 
 const GAME_LIBRARY = {
   minesweeper: { available: true },
@@ -86,7 +86,7 @@ const COPY = {
     gameMinesBody: "そのまま読み込んで遊べる、最初の常設ゲームです。",
     gameBinaryChip: "PLAYABLE",
     gameBinaryTitle: "バイナリシミュレーション",
-    gameBinaryBody: "100万円から始める、通貨連動のバイナリ練習枠です。",
+    gameBinaryBody: "昨日までの為替データから毎日3ケースを作る、再生型のバイナリ練習枠です。",
     gamePlanetChip: "COMING SOON",
     gamePlanetTitle: "惑星シミュレーション",
     gamePlanetBody: "重力や軌道を触って遊ぶ枠を先に置いています。",
@@ -109,8 +109,9 @@ const COPY = {
     binaryActionUp: "上がる",
     binaryActionDown: "下がる",
     binaryReset: "残高をリセット",
-    binaryStatusDefault: "通貨ペアを選んで判定方向を決めます。",
-    binaryProviderDefault: "ライブレートが使えるときだけ実売買を有効にします。",
+    binaryStatusDefault: "通貨ペアごとに1日1ケースを再生します。",
+    binaryProviderDefault: "昨日までの実データから作った疑似リアルタイムケースです。",
+    binaryCaseStatus: "{symbol} / 元データ {date} / {elapsed}秒経過",
     binaryOpenLabel: "OPEN",
     binaryOpenTitle: "進行中ポジション",
     binaryHistoryLabel: "HISTORY",
@@ -136,6 +137,7 @@ const COPY = {
     binaryPayout: "払戻 {amount}",
     binaryProviderNameLive: "Twelve Data",
     binaryProviderNameDaily: "Frankfurter",
+    binaryProviderNameHistorical: "Historical Replay",
     binaryProviderNameUnavailable: "Unavailable",
     games: {
       minesweeper: {
@@ -147,7 +149,7 @@ const COPY = {
       },
       binary: {
         panelTitle: "バイナリシミュレーション",
-        panelBody: "100万円から始めて、実際の通貨レートに連動した上下判定を試せます。",
+        panelBody: "100万円から始めて、昨日までの為替データを再生した1日3ケースで上下判定を試せます。",
         promptTitle: "バイナリシミュレーションを読み込み中",
         promptBody: "通貨ペアと口座状態を読み込みます。",
         badge: "PLAYABLE",
@@ -193,6 +195,9 @@ const COPY = {
         "現在は Frankfurter の日次参照レートだけ表示しています。ライブ売買は API キー設定後に有効になります。",
       binaryProviderDailyEnabled:
         "現在は Frankfurter の日次参照レートです。遅延があるので練習用途として扱ってください。",
+      binaryProviderHistorical: "昨日までの実データから作った本日のケースを1秒ごとに再生しています。",
+      binaryProviderHistoricalStale:
+        "最新ケース生成に失敗したため、直近の履歴ケースをそのまま再利用しています。",
       binaryProviderUnavailable: "レート取得に失敗しました。",
       binaryProviderStale: "新しいレート取得に失敗したため、直近のキャッシュを表示しています。",
       binarySettlementPending: "判定時のレート取得に失敗したため、一部ポジションは次回更新で確定します。",
@@ -220,6 +225,8 @@ const COPY = {
       "daily fx quote failed": "参照レート取得に失敗しました。",
       "fx quote unavailable": "レート取得に失敗しました。",
       "quote provider request failed": "外部レートAPIへの接続に失敗しました。",
+      "historical case unavailable": "履歴ケースを作るための十分なデータがありません。",
+      "historical case fetch failed": "履歴データの取得に失敗しました。",
     },
   },
   en: {
@@ -285,7 +292,7 @@ const COPY = {
     gameMinesBody: "The first permanent game and ready to launch immediately.",
     gameBinaryChip: "PLAYABLE",
     gameBinaryTitle: "Binary Simulation",
-    gameBinaryBody: "A 1,000,000 JPY practice account linked to live currency rates.",
+    gameBinaryBody: "A replay-style binary practice mode that builds three daily cases from historical FX data.",
     gamePlanetChip: "COMING SOON",
     gamePlanetTitle: "Planet Simulation",
     gamePlanetBody: "A future slot for orbit and gravity play.",
@@ -308,8 +315,9 @@ const COPY = {
     binaryActionUp: "Higher",
     binaryActionDown: "Lower",
     binaryReset: "Reset balance",
-    binaryStatusDefault: "Choose a pair and a direction.",
-    binaryProviderDefault: "Real trades stay enabled only while a live quote feed is available.",
+    binaryStatusDefault: "Each pair replays one daily case.",
+    binaryProviderDefault: "This is a pseudo-real-time case built from historical data up to yesterday.",
+    binaryCaseStatus: "{symbol} / source {date} / {elapsed}s elapsed",
     binaryOpenLabel: "OPEN",
     binaryOpenTitle: "Open positions",
     binaryHistoryLabel: "HISTORY",
@@ -335,6 +343,7 @@ const COPY = {
     binaryPayout: "Payout {amount}",
     binaryProviderNameLive: "Twelve Data",
     binaryProviderNameDaily: "Frankfurter",
+    binaryProviderNameHistorical: "Historical Replay",
     binaryProviderNameUnavailable: "Unavailable",
     games: {
       minesweeper: {
@@ -346,7 +355,7 @@ const COPY = {
       },
       binary: {
         panelTitle: "Binary Simulation",
-        panelBody: "Start with 1,000,000 JPY and try higher/lower positions linked to real FX rates.",
+        panelBody: "Start with 1,000,000 JPY and try higher/lower positions inside three daily replay cases built from historical FX data.",
         promptTitle: "Loading Binary Simulation",
         promptBody: "The panel is fetching the account state and quote feed.",
         badge: "PLAYABLE",
@@ -392,6 +401,9 @@ const COPY = {
         "Only Frankfurter daily reference rates are available right now. Live trading stays disabled until a live API key is configured.",
       binaryProviderDailyEnabled:
         "Frankfurter daily reference rates are active. Treat this as delayed practice mode.",
+      binaryProviderHistorical: "Today’s three replay cases are running from historical market data up to yesterday.",
+      binaryProviderHistoricalStale:
+        "Fresh case generation failed, so the most recent historical replay cases are being reused.",
       binaryProviderUnavailable: "The quote feed could not be loaded.",
       binaryProviderStale: "Fresh quotes failed, so the most recent cached quote is shown.",
       binarySettlementPending:
@@ -420,6 +432,8 @@ const COPY = {
       "daily fx quote failed": "Failed to fetch the daily reference quote.",
       "fx quote unavailable": "The quote feed is unavailable.",
       "quote provider request failed": "The external quote provider request failed.",
+      "historical case unavailable": "There is not enough historical data to build replay cases.",
+      "historical case fetch failed": "Failed to fetch historical data for replay cases.",
     },
   },
 };
@@ -988,12 +1002,19 @@ async function resetBinarySimulation() {
 function renderBinarySummary() {
   const providerName = binaryState?.provider?.name || getText("binaryProviderNameUnavailable");
   const providerCode = binaryState?.provider?.code || "unavailable";
+  const caseInfo = binaryState?.caseInfo || null;
   binaryBalance.textContent = formatYen(binaryState?.balance ?? 0);
   binaryQuote.textContent = binaryState?.quote?.displayPrice || "--";
   binaryProvider.textContent = providerLabel(providerName, providerCode);
   binaryStatusLine.textContent = binaryTransientMessage
     ? getText(binaryTransientMessage)
-    : getText("binaryStatusDefault");
+    : caseInfo
+      ? template(getText("binaryCaseStatus"), {
+          symbol: caseInfo.symbol,
+          date: caseInfo.referenceDate,
+          elapsed: caseInfo.elapsedSeconds,
+        })
+      : getText("binaryStatusDefault");
   binaryProviderLine.textContent = composeBinaryNotice(binaryState);
   binaryMarketNote.textContent = composeBinaryNotice(binaryState);
 }
@@ -1214,6 +1235,9 @@ function providerLabel(providerName, providerCode) {
   }
   if (providerCode === "daily") {
     return getText("binaryProviderNameDaily");
+  }
+  if (providerCode === "historical") {
+    return getText("binaryProviderNameHistorical");
   }
   return providerName || getText("binaryProviderNameUnavailable");
 }

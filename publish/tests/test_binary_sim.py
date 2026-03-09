@@ -8,23 +8,42 @@ PUBLISH_ROOT = os.path.dirname(TEST_ROOT)
 if PUBLISH_ROOT not in sys.path:
     sys.path.insert(0, PUBLISH_ROOT)
 
-from binary_sim import BinarySimulation
+from binary_sim import BinarySimulation, quote_for_case
+
+
+CASE = {
+    "symbol": "USD/JPY",
+    "referenceDate": "2026-03-08",
+    "series": [150.100, 150.140, 150.220, 150.260],
+    "totalSeconds": 3,
+}
+
+PROVIDER = {
+    "name": "Historical Replay",
+    "code": "historical",
+    "noteCode": "binaryProviderHistorical",
+    "tradingEnabled": True,
+    "stale": False,
+}
 
 
 class BinarySimulationTests(unittest.TestCase):
+    def test_quote_for_case_uses_elapsed_seconds(self):
+        quote = quote_for_case(CASE, started_at_epoch=100, now_epoch=102, provider=PROVIDER)
+
+        self.assertEqual(quote["displayPrice"], "150.220")
+        self.assertEqual(quote["elapsedSeconds"], 2)
+        self.assertEqual(quote["provider"]["code"], "historical")
+
     def test_place_trade_consumes_balance(self):
         simulation = BinarySimulation()
-        quote = {
-            "price": 150.125,
-            "displayPrice": "150.125",
-            "provider": {"tradingEnabled": True},
-        }
+        quote = quote_for_case(CASE, started_at_epoch=100, now_epoch=100, provider=PROVIDER)
 
         simulation.place_trade("USD/JPY", "up", 10_000, 60, quote, now_epoch=100)
 
         self.assertEqual(simulation.balance, 990_000)
         self.assertEqual(len(simulation.open_positions), 1)
-        self.assertEqual(simulation.open_positions[0]["expiresAt"], 160)
+        self.assertEqual(simulation.open_positions[0]["entryPrice"], "150.100")
 
     def test_settle_win_adds_payout(self):
         simulation = BinarySimulation(
@@ -37,51 +56,19 @@ class BinarySimulationTests(unittest.TestCase):
                     "stake": 10_000,
                     "entryPrice": "150.100",
                     "openedAt": 100,
-                    "expiresAt": 160,
+                    "expiresAt": 102,
                     "status": "open",
                 }
             ],
+            case_starts={"USD/JPY": 100},
         )
 
-        def lookup(_symbol):
-            return {
-                "price": 150.300,
-                "displayPrice": "150.300",
-                "provider": {"tradingEnabled": True},
-            }
+        simulation.settle_expired(lambda _symbol: CASE, PROVIDER, now_epoch=120)
 
-        notices = simulation.settle_expired(lookup, now_epoch=200)
-
-        self.assertEqual(notices, [])
         self.assertEqual(simulation.balance, 1_008_500)
         self.assertEqual(len(simulation.open_positions), 0)
         self.assertEqual(simulation.history[0]["result"], "won")
-        self.assertEqual(simulation.history[0]["payout"], 18_500)
-
-    def test_settlement_stays_open_when_quote_fails(self):
-        simulation = BinarySimulation(
-            open_positions=[
-                {
-                    "id": "abc",
-                    "symbol": "USD/JPY",
-                    "direction": "up",
-                    "stake": 10_000,
-                    "entryPrice": "150.100",
-                    "openedAt": 100,
-                    "expiresAt": 160,
-                    "status": "open",
-                }
-            ],
-        )
-
-        def lookup(_symbol):
-            raise RuntimeError("quote failed")
-
-        notices = simulation.settle_expired(lookup, now_epoch=200)
-
-        self.assertIn("binarySettlementPending", notices)
-        self.assertEqual(len(simulation.open_positions), 1)
-        self.assertEqual(len(simulation.history), 0)
+        self.assertEqual(simulation.history[0]["exitPrice"], "150.220")
 
 
 if __name__ == "__main__":

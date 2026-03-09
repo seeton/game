@@ -305,8 +305,21 @@ def handle_binary_api(action, environ, start_response, query):
     method = environ.get("REQUEST_METHOD", "GET").upper()
     selected_symbol = query.get("symbol", [BINARY_DEFAULT_SYMBOL])[0]
 
+    def build_state():
+        try:
+            return build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR)
+        except RuntimeError as exc:
+            return error_response(
+                start_response,
+                HTTPStatus.BAD_GATEWAY,
+                str(exc),
+                extra_headers=extra_headers,
+            )
+
     if action == "binary_state":
-        state = build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR)
+        state = build_state()
+        if isinstance(state, list):
+            return state
         save_binary_session(session_id, simulation)
         return json_response(start_response, state, extra_headers=extra_headers)
 
@@ -327,11 +340,15 @@ def handle_binary_api(action, environ, start_response, query):
 
     if action == "binary_reset":
         simulation = BinarySimulation()
-        state = build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR)
+        state = build_state()
+        if isinstance(state, list):
+            return state
         save_binary_session(session_id, simulation)
         return json_response(start_response, state, extra_headers=extra_headers)
 
-    state = build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR)
+    state = build_state()
+    if isinstance(state, list):
+        return state
     try:
         simulation.place_trade(
             selected_symbol,
@@ -343,7 +360,9 @@ def handle_binary_api(action, environ, start_response, query):
     except (KeyError, TypeError, ValueError) as exc:
         return error_response(start_response, HTTPStatus.BAD_REQUEST, str(exc), extra_headers=extra_headers)
 
-    state = build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR)
+    state = build_state()
+    if isinstance(state, list):
+        return state
     save_binary_session(session_id, simulation)
     return json_response(start_response, state, extra_headers=extra_headers)
 
