@@ -58,7 +58,7 @@ class AppCoreTests(unittest.TestCase):
         status, _, body = self.run_application("/")
         self.assertTrue(status.startswith("200"))
         self.assertIn(b'./static/styles.css', body)
-        self.assertIn(b'./static/app.js?v=20260309i', body)
+        self.assertIn(b'./static/app.js?v=20260309n', body)
 
     def test_binary_state_returns_json_error_when_case_build_fails(self) -> None:
         with mock.patch("app_core.build_binary_public_state", side_effect=RuntimeError("historical case fetch failed")):

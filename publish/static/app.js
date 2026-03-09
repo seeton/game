@@ -98,7 +98,7 @@ const COPY = {
     gameBinaryChip: "PLAYABLE",
     gameBinaryTitle: "バイナリシミュレーション",
     gameBinaryBody: "10万円から始めて、昨日までの為替データを1秒ごとに再生する練習用バイナリです。",
-    gameFishingChip: "PLAYABLE",
+    gameFishingChip: "SONAR ONLY",
     gameFishingTitle: "漁業シミュレーション",
     gameFishingBody: "ソナーで魚群を探し、向かうか別海域を探すかを決める探索ゲームです。",
     gamePlanetChip: "COMING SOON",
@@ -200,7 +200,7 @@ const COPY = {
         panelBody: "盤面の上に状態と難易度を置き、小さめの盤面をすぐ遊べる形にしています。",
         promptTitle: "マインスイーパーを読み込み中",
         promptBody: "棚から選ぶと同時に盤面の準備を始めます。",
-        badge: "PLAYABLE",
+        badge: "SONAR ONLY",
       },
       binary: {
         panelTitle: "バイナリシミュレーション",
@@ -348,7 +348,7 @@ const COPY = {
     gameBinaryChip: "PLAYABLE",
     gameBinaryTitle: "Binary Simulation",
     gameBinaryBody: "A 100,000 JPY practice wallet that replays historical FX data second by second.",
-    gameFishingChip: "PLAYABLE",
+    gameFishingChip: "SONAR ONLY",
     gameFishingTitle: "Fishing Simulation",
     gameFishingBody: "Sweep with sonar, find a school, then decide whether to head there or search elsewhere.",
     gamePlanetChip: "COMING SOON",
@@ -450,7 +450,7 @@ const COPY = {
         panelBody: "Status and difficulty stay above the board so the board itself can stay compact.",
         promptTitle: "Loading Minesweeper",
         promptBody: "Choosing it from the shelf starts the board request immediately.",
-        badge: "PLAYABLE",
+        badge: "SONAR ONLY",
       },
       binary: {
         panelTitle: "Binary Simulation",
@@ -573,6 +573,7 @@ const binaryProvider = document.getElementById("binary-provider");
 const binaryStatusLine = document.getElementById("binary-status-line");
 const binaryProviderLine = document.getElementById("binary-provider-line");
 const binaryPairPicker = document.getElementById("binary-pair-picker");
+const binaryStartButton = document.getElementById("binary-start-button");
 const binaryDurationPicker = document.getElementById("binary-duration-picker");
 const binaryStakePresets = document.getElementById("binary-stake-presets");
 const binaryStakeInput = document.getElementById("binary-stake-input");
@@ -695,6 +696,14 @@ binaryDownButton.addEventListener("click", async () => {
   }
 });
 
+binaryStartButton.addEventListener("click", async () => {
+  try {
+    await startBinaryCase();
+  } catch (error) {
+    showBinaryError(error);
+  }
+});
+
 fishingScanButton.addEventListener("click", () => {
   void runFishingScan();
 });
@@ -728,10 +737,18 @@ function getText(key) {
 }
 
 function getBinaryNotice(code) {
+  if (code === "binaryAwaitingStart") {
+    return currentLanguage === "ja"
+      ? "PAIR を選んで開始を押すまで、ケースは静止したままです。"
+      : "The case stays still until you choose a pair and press Start.";
+  }
   return currentCopy().binaryNoticeCodes[code] || code;
 }
 
 function getErrorText(message) {
+  if (message === "binary case not started") {
+    return currentLanguage === "ja" ? "開始を押してから取引してください。" : "Press Start before placing a trade.";
+  }
   return currentCopy().errors[message] || message || currentCopy().errors["Request failed"];
 }
 
@@ -795,8 +812,13 @@ function maybeAutoLoadSelectedGame() {
     return;
   }
 
-  if (selectedGame === "binary" && hasLoadedBinary) {
+  if (selectedGame === "binary" && hasLoadedBinary && shouldBinaryPollState()) {
     startBinaryPolling();
+    return;
+  }
+
+  if (selectedGame === "binary") {
+    stopBinaryPolling();
   }
 }
 
@@ -833,6 +855,7 @@ function renderGameShell() {
     gameLoading.hidden = true;
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
+    fishingPanel.hidden = true;
     gamePlaceholder.hidden = false;
     renderPlaceholder(gameCopy.promptTitle, gameCopy.promptBody);
     renderIdleStats();
@@ -1042,7 +1065,11 @@ function renderFishingPanel() {
   const zoneLabel = detection ? getFishingZoneLabel(detection.zoneId) : "";
 
   fishingSweeps.textContent = formatInteger(fishingState.sweeps);
-  fishingSignal.textContent = signalLevel ? getFishingSignalLabel(signalLevel) : getText("fishingSignalNone");
+  fishingSignal.textContent = isScanning
+    ? getText("fishingStatusScanning")
+    : signalLevel
+      ? getFishingSignalLabel(signalLevel)
+      : getText("fishingSignalNone");
   fishingDecision.textContent = getFishingDecisionLabel();
   fishingScanButton.disabled = isScanning;
   fishingGoButton.disabled = isScanning || !detection;
@@ -1396,8 +1423,10 @@ async function loadBinaryState() {
   } finally {
     isGameLoading = false;
     renderGameShell();
-    if (selectedGame === "binary" && hasLoadedBinary) {
+    if (selectedGame === "binary" && shouldBinaryPollState()) {
       startBinaryPolling();
+    } else {
+      stopBinaryPolling();
     }
   }
 }
@@ -1419,6 +1448,15 @@ async function placeBinaryTrade(direction) {
     duration: binarySelectedDuration,
   }));
   binaryTransientMessage = "binaryTradePlaced";
+  renderBinaryPanel();
+}
+
+async function startBinaryCase() {
+  if (selectedGame !== "binary") {
+    return;
+  }
+  applyBinaryState(await requestJson("binary_start", {}, { symbol: binarySelectedSymbol }));
+  binaryTransientMessage = null;
   renderBinaryPanel();
 }
 
@@ -1446,6 +1484,13 @@ function renderBinarySummary() {
   binaryProvider.textContent = providerLabel(providerName, providerCode);
   binaryStatusLine.textContent = binaryTransientMessage
     ? getText(binaryTransientMessage)
+    : caseInfo && !caseInfo.started
+      ? (
+          getText("binaryStatusWaiting")
+          || (currentLanguage === "ja"
+            ? "PAIR を選んで開始を押すとケースが動きます。"
+            : "Pick a pair and press Start to begin the case.")
+        )
     : caseInfo
       ? template(getText("binaryCaseStatus"), {
           symbol: caseInfo.symbol,
@@ -1483,12 +1528,24 @@ function renderBinaryPanel() {
     getText("binaryHistoryEmpty"),
     renderHistoryItem,
   );
-  startBinaryPlaybackLoop();
+  if (shouldBinaryPlaybackRun()) {
+    startBinaryPlaybackLoop();
+  } else {
+    stopBinaryPlaybackLoop();
+  }
+  if (shouldBinaryPollState()) {
+    startBinaryPolling();
+  } else {
+    stopBinaryPolling();
+  }
 }
 
 function renderBinaryControls() {
   const symbols = binaryState?.symbols || [binarySelectedSymbol];
   const durations = binaryState?.durations || [binarySelectedDuration];
+  const caseInfo = binaryState?.caseInfo || null;
+  const caseStarted = Boolean(caseInfo?.started);
+  const caseCompleted = Boolean(caseInfo?.completed);
 
   binaryPairPicker.replaceChildren();
   symbols.forEach((symbol) => {
@@ -1512,6 +1569,22 @@ function renderBinaryControls() {
     });
     binaryPairPicker.appendChild(button);
   });
+
+  binaryStartButton.textContent = caseStarted && caseCompleted
+    ? (
+        getText("binaryRestartAction")
+        || (currentLanguage === "ja" ? "もう一度開始" : "Restart")
+      )
+    : caseStarted
+      ? (
+          getText("binaryRunningAction")
+          || (currentLanguage === "ja" ? "進行中" : "Running")
+        )
+      : (
+          getText("binaryStartAction")
+          || (currentLanguage === "ja" ? "開始" : "Start")
+        );
+  binaryStartButton.disabled = isGameLoading || (caseStarted && !caseCompleted);
 
   binaryDurationPicker.replaceChildren();
   durations.forEach((duration) => {
@@ -1559,7 +1632,7 @@ function renderBinaryChart() {
     binaryChartMin.textContent = "--";
     binaryChartMax.textContent = "--";
     binaryChartTicks.forEach((tick) => {
-      tick.textContent = "--:--:--";
+      tick.textContent = "--:--";
     });
     return;
   }
@@ -1881,7 +1954,9 @@ function composeBinaryNotice(state) {
 }
 
 function startBinaryPolling() {
-  stopBinaryPolling();
+  if (binaryPollTimer !== null) {
+    return;
+  }
   binaryPollTimer = window.setInterval(async () => {
     if (selectedGame !== "binary" || isGameLoading) {
       return;
@@ -1924,6 +1999,23 @@ function stopBinaryPlaybackLoop() {
     window.cancelAnimationFrame(binaryPlaybackFrame);
     binaryPlaybackFrame = null;
   }
+}
+
+function shouldBinaryPollState() {
+  if (selectedGame !== "binary" || !hasLoadedBinary || !binaryState) {
+    return false;
+  }
+  if (Array.isArray(binaryState.openPositions) && binaryState.openPositions.length > 0) {
+    return true;
+  }
+  return Boolean(binaryState.caseInfo?.started && !binaryState.caseInfo?.completed);
+}
+
+function shouldBinaryPlaybackRun() {
+  if (selectedGame !== "binary" || !binaryState || isGameLoading) {
+    return false;
+  }
+  return Boolean(binaryState.caseInfo?.started && !binaryState.caseInfo?.completed);
 }
 
 function sleep(ms) {

@@ -39,7 +39,7 @@ DIFFICULTIES = {
 }
 
 MINES_ACTIONS = {"state", "new", "reveal", "flag"}
-BINARY_ACTIONS = {"binary_state", "binary_trade", "binary_reset"}
+BINARY_ACTIONS = {"binary_state", "binary_trade", "binary_reset", "binary_start"}
 
 
 def ensure_runtime_dirs():
@@ -327,6 +327,35 @@ def handle_binary_api(action, environ, start_response, query):
         state = build_state()
         if isinstance(state, list):
             return state
+        save_binary_session(session_id, simulation)
+        return json_response(start_response, state, extra_headers=extra_headers)
+
+    if action == "binary_start":
+        if method != "POST":
+            return error_response(
+                start_response,
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                "POST required",
+                extra_headers=extra_headers,
+            )
+
+        now_epoch = int(time.time())
+        state = None
+        try:
+            state = build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR, now_epoch=now_epoch)
+        except RuntimeError as exc:
+            return error_response(
+                start_response,
+                HTTPStatus.BAD_GATEWAY,
+                str(exc),
+                extra_headers=extra_headers,
+            )
+        case_info = state.get("caseInfo", {})
+        if not case_info.get("started") or case_info.get("completed"):
+            simulation.restart_case(selected_symbol, now_epoch)
+            state = build_state()
+            if isinstance(state, list):
+                return state
         save_binary_session(session_id, simulation)
         return json_response(start_response, state, extra_headers=extra_headers)
 

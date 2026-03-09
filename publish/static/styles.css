@@ -1249,6 +1249,12 @@ main {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.binary-start-button {
+  width: 100%;
+  margin-top: 12px;
+  justify-content: center;
+}
+
 .binary-market-note {
   margin: 0;
 }
@@ -1283,37 +1289,42 @@ main {
 }
 
 .binary-chart-guide {
-  stroke: rgba(255, 255, 255, 0.12);
-  stroke-width: 0.45;
-  stroke-dasharray: 1.2 1.6;
+  stroke: rgba(196, 214, 233, 0.1);
+  stroke-width: 0.38;
+  stroke-dasharray: 0.8 2.1;
 }
 
 .binary-chart-future {
-  stroke: rgba(255, 255, 255, 0.24);
-  stroke-width: 0.95;
+  stroke: rgba(165, 184, 204, 0.18);
+  stroke-width: 0.7;
+  stroke-dasharray: 2.2 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .binary-chart-path {
-  stroke: var(--accent);
-  stroke-width: 1.15;
+  stroke: url(#binary-chart-gradient);
+  stroke-width: 0.96;
   stroke-linecap: round;
   stroke-linejoin: round;
-  filter: drop-shadow(0 0 6px rgba(126, 248, 221, 0.2));
+  filter:
+    drop-shadow(0 0 8px rgba(95, 169, 255, 0.16))
+    drop-shadow(0 0 14px rgba(132, 241, 255, 0.08));
 }
 
 .binary-chart-progress {
-  stroke: rgba(255, 210, 125, 0.9);
-  stroke-width: 0.55;
-  stroke-dasharray: 1.1 1.8;
+  stroke: rgba(255, 255, 255, 0.34);
+  stroke-width: 0.42;
+  stroke-dasharray: 0.9 2.7;
 }
 
 .binary-chart-point {
-  fill: var(--accent-warm);
-  stroke: rgba(4, 17, 31, 0.9);
-  stroke-width: 0.35;
-  filter: drop-shadow(0 0 8px rgba(255, 210, 125, 0.28));
+  fill: #f4fbff;
+  stroke: rgba(95, 169, 255, 0.92);
+  stroke-width: 0.48;
+  filter:
+    drop-shadow(0 0 8px rgba(95, 169, 255, 0.22))
+    drop-shadow(0 0 14px rgba(132, 241, 255, 0.14));
 }
 
 .binary-chart-edge,

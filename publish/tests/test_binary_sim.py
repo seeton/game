@@ -36,7 +36,7 @@ class BinarySimulationTests(unittest.TestCase):
         self.assertEqual(quote["provider"]["code"], "historical")
 
     def test_place_trade_consumes_balance(self):
-        simulation = BinarySimulation()
+        simulation = BinarySimulation(case_starts={"USD/JPY": 100})
         quote = quote_for_case(CASE, started_at_epoch=100, now_epoch=100, provider=PROVIDER)
 
         simulation.place_trade("USD/JPY", "up", 10_000, 10, quote, now_epoch=100)
@@ -71,13 +71,15 @@ class BinarySimulationTests(unittest.TestCase):
         self.assertEqual(simulation.history[0]["exitPrice"], "150.220")
 
     def test_public_state_includes_chart_and_short_durations(self):
-        simulation = BinarySimulation()
+        simulation = BinarySimulation(case_starts={"USD/JPY": 100})
         quote = quote_for_case(CASE, started_at_epoch=100, now_epoch=102, provider=PROVIDER)
         state = simulation.to_public_state(
             "USD/JPY",
             {"provider": PROVIDER, "cases": {"USD/JPY": CASE}},
             quote,
             now_epoch=102,
+            case_started=True,
+            case_started_at=100,
         )
 
         self.assertEqual(state["startingBalance"], 100_000)
@@ -86,6 +88,34 @@ class BinarySimulationTests(unittest.TestCase):
         self.assertEqual(state["chart"]["history"], CASE["series"][:3])
         self.assertEqual(state["chart"]["currentPrice"], "150.220")
         self.assertEqual(state["chart"]["priceDigits"], 3)
+        self.assertTrue(state["caseInfo"]["started"])
+        self.assertTrue(state["tradingEnabled"])
+
+    def test_public_state_before_start_is_static(self):
+        simulation = BinarySimulation()
+        quote = {
+            "symbol": "USD/JPY",
+            "price": 150.100,
+            "displayPrice": "150.100",
+            "updatedAt": "2026-03-08T+000s",
+            "elapsedSeconds": 0,
+            "totalSeconds": 3,
+            "referenceDate": "2026-03-08",
+            "provider": PROVIDER,
+        }
+        state = simulation.to_public_state(
+            "USD/JPY",
+            {"provider": PROVIDER, "cases": {"USD/JPY": CASE}},
+            quote,
+            now_epoch=100,
+            case_started=False,
+            case_started_at=None,
+        )
+
+        self.assertEqual(state["chart"]["history"], [CASE["series"][0]])
+        self.assertFalse(state["caseInfo"]["started"])
+        self.assertFalse(state["caseInfo"]["completed"])
+        self.assertFalse(state["tradingEnabled"])
 
 
 if __name__ == "__main__":

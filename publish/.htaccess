@@ -7,7 +7,11 @@ RewriteCond %{HTTP_HOST} ^www\.seetona\.com$ [NC]
 RewriteCond %{HTTPS} !=on
 RewriteRule ^ https://www.seetona.com%{REQUEST_URI} [R=301,L]
 
-DirectoryIndex app.xcg index.html
+RewriteCond %{REQUEST_URI} ^/app\.xcg$ [NC]
+RewriteCond %{QUERY_STRING} ^$
+RewriteRule ^app\.xcg$ /index.html [R=302,L]
+
+DirectoryIndex index.html app.xcg
 
 <FilesMatch "^(README\.md|Dockerfile|app\.py|app_core\.py|minesweeper\.py|__init__\.py)$">
   Require all denied

@@ -291,6 +291,13 @@ class BinarySimulation(object):
             self.case_starts[symbol] = int(now_epoch)
         return int(self.case_starts[symbol])
 
+    def has_case_started(self, symbol):
+        return symbol in self.case_starts
+
+    def restart_case(self, symbol, now_epoch):
+        self.case_starts[symbol] = int(now_epoch)
+        return int(self.case_starts[symbol])
+
     def settle_expired(self, case_lookup, provider, now_epoch=None):
         now_epoch = int(now_epoch or time.time())
         remaining = []
@@ -349,8 +356,9 @@ class BinarySimulation(object):
             raise ValueError("stake too small")
         if stake > self.balance:
             raise ValueError("insufficient balance")
+        if not self.has_case_started(symbol):
+            raise ValueError("binary case not started")
 
-        self.ensure_case_started(symbol, now_epoch)
         position = {
             "id": uuid.uuid4().hex[:12],
             "symbol": symbol,
@@ -365,7 +373,16 @@ class BinarySimulation(object):
         self.open_positions.insert(0, position)
         return position
 
-    def to_public_state(self, selected_symbol, cases_payload, current_quote, notices=None, now_epoch=None):
+    def to_public_state(
+        self,
+        selected_symbol,
+        cases_payload,
+        current_quote,
+        notices=None,
+        now_epoch=None,
+        case_started=False,
+        case_started_at=None,
+    ):
         now_epoch = int(now_epoch or time.time())
         public_open_positions = []
         for position in sorted(self.open_positions, key=lambda item: int(item["expiresAt"])):
@@ -400,9 +417,11 @@ class BinarySimulation(object):
             )
 
         selected_case = cases_payload["cases"][selected_symbol]
-        case_started_at = self.ensure_case_started(selected_symbol, now_epoch)
         current_elapsed = int(current_quote["elapsedSeconds"])
-        revealed_series = [float(price) for price in selected_case["series"][: current_elapsed + 1]]
+        if case_started:
+            revealed_series = [float(price) for price in selected_case["series"][: current_elapsed + 1]]
+        else:
+            revealed_series = [float(selected_case["series"][0])]
         return {
             "balance": self.balance,
             "startingBalance": STARTING_BALANCE,
@@ -415,7 +434,7 @@ class BinarySimulation(object):
             "payoutRate": float(DEFAULT_PAYOUT_RATE),
             "quote": current_quote,
             "provider": dict(cases_payload["provider"]),
-            "tradingEnabled": True,
+            "tradingEnabled": bool(case_started),
             "notices": list(dict.fromkeys(notices or [])),
             "openPositions": public_open_positions,
             "history": public_history,
@@ -431,9 +450,10 @@ class BinarySimulation(object):
                 "symbol": selected_symbol,
                 "referenceDate": selected_case["referenceDate"],
                 "startedAt": case_started_at,
+                "started": bool(case_started),
                 "elapsedSeconds": current_elapsed,
                 "totalSeconds": int(selected_case["totalSeconds"]),
-                "completed": current_elapsed >= int(selected_case["totalSeconds"]),
+                "completed": bool(case_started) and current_elapsed >= int(selected_case["totalSeconds"]),
             },
         }
 
@@ -470,20 +490,40 @@ def build_public_state(simulation, selected_symbol, runtime_dir, now_epoch=None)
     def case_lookup(symbol):
         return cases_payload["cases"][symbol]
 
-    simulation.ensure_case_started(selected_symbol, now_epoch)
     simulation.settle_expired(case_lookup, provider, now_epoch=now_epoch)
-    current_quote = quote_for_case(
-        case_lookup(selected_symbol),
-        simulation.ensure_case_started(selected_symbol, now_epoch),
-        now_epoch,
-        provider,
-    )
+    selected_case = case_lookup(selected_symbol)
+    case_started = simulation.has_case_started(selected_symbol)
+    if case_started:
+        case_started_at = int(simulation.case_starts[selected_symbol])
+        current_quote = quote_for_case(
+            selected_case,
+            case_started_at,
+            now_epoch,
+            provider,
+        )
+    else:
+        first_price = float(selected_case["series"][0])
+        case_started_at = None
+        current_quote = {
+            "symbol": selected_case["symbol"],
+            "price": first_price,
+            "displayPrice": _format_price(selected_case["symbol"], first_price),
+            "updatedAt": "%sT+000s" % selected_case["referenceDate"],
+            "elapsedSeconds": 0,
+            "totalSeconds": int(selected_case["totalSeconds"]),
+            "referenceDate": selected_case["referenceDate"],
+            "provider": provider,
+        }
 
     notices = [provider.get("noteCode", "binaryProviderHistorical")]
+    if not case_started:
+        notices.insert(0, "binaryAwaitingStart")
     return simulation.to_public_state(
         selected_symbol,
         cases_payload,
         current_quote,
         notices=notices,
         now_epoch=now_epoch,
+        case_started=case_started,
+        case_started_at=case_started_at,
     )
