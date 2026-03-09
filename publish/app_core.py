@@ -4,24 +4,33 @@ import os
 import posixpath
 import random
 import sys
+import time
 import uuid
 from http import HTTPStatus
+from urllib.parse import parse_qs
 from wsgiref.handlers import CGIHandler
 from wsgiref.simple_server import make_server
-from urllib.parse import parse_qs
 
+from binary_sim import (
+    BinarySimulation,
+    DEFAULT_DURATION as BINARY_DEFAULT_DURATION,
+    DEFAULT_SYMBOL as BINARY_DEFAULT_SYMBOL,
+    build_public_state as build_binary_public_state,
+)
 from minesweeper import Game
 
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(ROOT, "static")
 RUNTIME_DIR = os.path.join(ROOT, "runtime")
-SESSION_DIR = os.path.join(RUNTIME_DIR, "sessions")
+MINESWEEPER_SESSION_DIR = os.path.join(RUNTIME_DIR, "sessions")
+BINARY_SESSION_DIR = os.path.join(RUNTIME_DIR, "binary_sessions")
 SESSION_COOKIE = "signal_sweep_session"
 DEFAULT_PORT = 8000
 DEFAULT_DIFFICULTY = "medium"
 MAX_BODY_BYTES = 16_384
 ROOT_STATIC_EXTENSIONS = {".css", ".js", ".svg", ".png", ".ico", ".json", ".webmanifest"}
+SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
 
 DIFFICULTIES = {
     "easy": {"rows": 9, "cols": 9, "mines": 10},
@@ -29,12 +38,14 @@ DIFFICULTIES = {
     "hard": {"rows": 16, "cols": 30, "mines": 99},
 }
 
+MINES_ACTIONS = {"state", "new", "reveal", "flag"}
+BINARY_ACTIONS = {"binary_state", "binary_trade", "binary_reset"}
+
 
 def ensure_runtime_dirs():
-    if not os.path.isdir(RUNTIME_DIR):
-        os.makedirs(RUNTIME_DIR)
-    if not os.path.isdir(SESSION_DIR):
-        os.makedirs(SESSION_DIR)
+    for directory in (RUNTIME_DIR, MINESWEEPER_SESSION_DIR, BINARY_SESSION_DIR):
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
 
 
 def guess_content_type(path):
@@ -83,7 +94,8 @@ def error_response(start_response, status_code, message, extra_headers=None):
 def serve_static_file(start_response, relative_path):
     normalized = posixpath.normpath(relative_path).lstrip("/")
     full_path = os.path.abspath(os.path.join(STATIC_DIR, normalized))
-    if not full_path.startswith(os.path.abspath(STATIC_DIR) + os.sep) and full_path != os.path.abspath(STATIC_DIR):
+    static_root = os.path.abspath(STATIC_DIR)
+    if not full_path.startswith(static_root + os.sep) and full_path != static_root:
         return error_response(start_response, HTTPStatus.NOT_FOUND, "asset not found")
     if not os.path.isfile(full_path):
         return error_response(start_response, HTTPStatus.NOT_FOUND, "asset not found")
@@ -127,42 +139,65 @@ def parse_cookies(environ):
     return cookies
 
 
-def session_path(session_id):
-    return os.path.join(SESSION_DIR, "%s.json" % session_id)
+def _session_path(directory, session_id):
+    return os.path.join(directory, "%s.json" % session_id)
 
 
-def save_session(session_id, game):
+def _save_json(directory, session_id, payload):
     ensure_runtime_dirs()
-    temp_path = session_path(session_id) + ".tmp"
+    path = _session_path(directory, session_id)
+    temp_path = path + ".tmp"
     with open(temp_path, "w", encoding="utf-8") as handle:
-        json.dump(game.serialize(), handle, separators=(",", ":"))
-    os.replace(temp_path, session_path(session_id))
+        json.dump(payload, handle, separators=(",", ":"))
+    os.replace(temp_path, path)
 
 
-def load_session(session_id):
-    path = session_path(session_id)
+def _load_json(directory, session_id):
+    path = _session_path(directory, session_id)
     if not os.path.isfile(path):
         return None
     with open(path, "r", encoding="utf-8") as handle:
-        payload = json.load(handle)
+        return json.load(handle)
+
+
+def save_minesweeper_session(session_id, game):
+    _save_json(MINESWEEPER_SESSION_DIR, session_id, game.serialize())
+
+
+def load_minesweeper_session(session_id):
+    payload = _load_json(MINESWEEPER_SESSION_DIR, session_id)
+    if payload is None:
+        return None
     return Game.from_dict(payload)
 
 
-def cleanup_sessions():
+def save_binary_session(session_id, simulation):
+    _save_json(BINARY_SESSION_DIR, session_id, simulation.serialize())
+
+
+def load_binary_session(session_id):
+    payload = _load_json(BINARY_SESSION_DIR, session_id)
+    if payload is None:
+        return None
+    return BinarySimulation.from_dict(payload)
+
+
+def cleanup_old_sessions():
     if random.random() > 0.05:
         return
+
     ensure_runtime_dirs()
-    now = int(__import__("time").time())
-    max_age = 60 * 60 * 24
-    for filename in os.listdir(SESSION_DIR):
-        if not filename.endswith(".json"):
-            continue
-        path = os.path.join(SESSION_DIR, filename)
-        try:
-            if now - int(os.path.getmtime(path)) > max_age:
-                os.remove(path)
-        except OSError:
-            continue
+    now_epoch = int(time.time())
+    for directory in (MINESWEEPER_SESSION_DIR, BINARY_SESSION_DIR):
+        for filename in os.listdir(directory):
+            if not filename.endswith(".json"):
+                continue
+            path = os.path.join(directory, filename)
+            try:
+                if now_epoch - int(os.path.getmtime(path)) > SESSION_MAX_AGE_SECONDS:
+                    os.remove(path)
+            except OSError:
+                continue
 
 
 def is_https_request(environ):
@@ -189,40 +224,50 @@ def make_cookie_header(session_id, environ):
     return "; ".join(parts)
 
 
-def ensure_session(environ):
-    cleanup_sessions()
+def ensure_session_id(environ):
+    cleanup_old_sessions()
     cookies = parse_cookies(environ)
     session_id = cookies.get(SESSION_COOKIE)
     if session_id:
-        game = load_session(session_id)
-        if game is not None:
-            return session_id, game, []
+        return session_id, []
     session_id = uuid.uuid4().hex
-    game = Game(
-        DIFFICULTIES[DEFAULT_DIFFICULTY]["rows"],
-        DIFFICULTIES[DEFAULT_DIFFICULTY]["cols"],
-        DIFFICULTIES[DEFAULT_DIFFICULTY]["mines"],
-        DEFAULT_DIFFICULTY,
-    )
-    save_session(session_id, game)
-    return session_id, game, [("Set-Cookie", make_cookie_header(session_id, environ))]
+    return session_id, [("Set-Cookie", make_cookie_header(session_id, environ))]
 
 
-def handle_api(environ, start_response):
-    query = parse_qs(environ.get("QUERY_STRING", ""), keep_blank_values=True)
-    action = query.get("action", [""])[0]
-    if action not in ("state", "new", "reveal", "flag"):
-        return error_response(start_response, HTTPStatus.NOT_FOUND, "not found")
+def ensure_minesweeper_session(environ):
+    session_id, extra_headers = ensure_session_id(environ)
+    game = load_minesweeper_session(session_id)
+    if game is None:
+        config = DIFFICULTIES[DEFAULT_DIFFICULTY]
+        game = Game(config["rows"], config["cols"], config["mines"], DEFAULT_DIFFICULTY)
+        save_minesweeper_session(session_id, game)
+    return session_id, game, extra_headers
 
-    session_id, game, extra_headers = ensure_session(environ)
+
+def ensure_binary_simulation(environ):
+    session_id, extra_headers = ensure_session_id(environ)
+    simulation = load_binary_session(session_id)
+    if simulation is None:
+        simulation = BinarySimulation()
+        save_binary_session(session_id, simulation)
+    return session_id, simulation, extra_headers
+
+
+def handle_minesweeper_api(action, environ, start_response):
+    session_id, game, extra_headers = ensure_minesweeper_session(environ)
     method = environ.get("REQUEST_METHOD", "GET").upper()
 
     if action == "state":
-        save_session(session_id, game)
+        save_minesweeper_session(session_id, game)
         return json_response(start_response, game.to_public_state(), extra_headers=extra_headers)
 
     if method != "POST":
-        return error_response(start_response, HTTPStatus.METHOD_NOT_ALLOWED, "POST required", extra_headers=extra_headers)
+        return error_response(
+            start_response,
+            HTTPStatus.METHOD_NOT_ALLOWED,
+            "POST required",
+            extra_headers=extra_headers,
+        )
 
     try:
         payload = parse_request_json(environ)
@@ -234,7 +279,12 @@ def handle_api(environ, start_response):
             difficulty_name = str(payload.get("difficulty", DEFAULT_DIFFICULTY))
             config = DIFFICULTIES.get(difficulty_name)
             if config is None:
-                return error_response(start_response, HTTPStatus.BAD_REQUEST, "unknown difficulty", extra_headers=extra_headers)
+                return error_response(
+                    start_response,
+                    HTTPStatus.BAD_REQUEST,
+                    "unknown difficulty",
+                    extra_headers=extra_headers,
+                )
             game = Game(config["rows"], config["cols"], config["mines"], difficulty_name)
         else:
             row = int(payload["row"])
@@ -246,8 +296,67 @@ def handle_api(environ, start_response):
     except (KeyError, TypeError, ValueError) as exc:
         return error_response(start_response, HTTPStatus.BAD_REQUEST, str(exc), extra_headers=extra_headers)
 
-    save_session(session_id, game)
+    save_minesweeper_session(session_id, game)
     return json_response(start_response, game.to_public_state(), extra_headers=extra_headers)
+
+
+def handle_binary_api(action, environ, start_response, query):
+    session_id, simulation, extra_headers = ensure_binary_simulation(environ)
+    method = environ.get("REQUEST_METHOD", "GET").upper()
+    selected_symbol = query.get("symbol", [BINARY_DEFAULT_SYMBOL])[0]
+
+    if action == "binary_state":
+        state = build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR)
+        save_binary_session(session_id, simulation)
+        return json_response(start_response, state, extra_headers=extra_headers)
+
+    if method != "POST":
+        return error_response(
+            start_response,
+            HTTPStatus.METHOD_NOT_ALLOWED,
+            "POST required",
+            extra_headers=extra_headers,
+        )
+
+    try:
+        payload = parse_request_json(environ)
+    except ValueError as exc:
+        return error_response(start_response, HTTPStatus.BAD_REQUEST, str(exc), extra_headers=extra_headers)
+
+    selected_symbol = str(payload.get("symbol") or selected_symbol or BINARY_DEFAULT_SYMBOL)
+
+    if action == "binary_reset":
+        simulation = BinarySimulation()
+        state = build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR)
+        save_binary_session(session_id, simulation)
+        return json_response(start_response, state, extra_headers=extra_headers)
+
+    state = build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR)
+    try:
+        simulation.place_trade(
+            selected_symbol,
+            str(payload["direction"]),
+            int(payload["stake"]),
+            int(payload.get("duration", BINARY_DEFAULT_DURATION)),
+            state["quote"] or {},
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        return error_response(start_response, HTTPStatus.BAD_REQUEST, str(exc), extra_headers=extra_headers)
+
+    state = build_binary_public_state(simulation, selected_symbol, RUNTIME_DIR)
+    save_binary_session(session_id, simulation)
+    return json_response(start_response, state, extra_headers=extra_headers)
+
+
+def handle_api(environ, start_response):
+    query = parse_qs(environ.get("QUERY_STRING", ""), keep_blank_values=True)
+    action = query.get("action", [""])[0]
+
+    if action in MINES_ACTIONS:
+        return handle_minesweeper_api(action, environ, start_response)
+    if action in BINARY_ACTIONS:
+        return handle_binary_api(action, environ, start_response, query)
+    return error_response(start_response, HTTPStatus.NOT_FOUND, "not found")
 
 
 def application(environ, start_response):

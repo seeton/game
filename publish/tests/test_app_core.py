@@ -56,7 +56,7 @@ class AppCoreTests(unittest.TestCase):
         status, _, body = self.run_application("/")
         self.assertTrue(status.startswith("200"))
         self.assertIn(b'./static/styles.css', body)
-        self.assertIn(b'./static/app.js?v=20260308g', body)
+        self.assertIn(b'./static/app.js?v=20260309a', body)
 
 
 if __name__ == "__main__":

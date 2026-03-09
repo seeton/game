@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SEETONA のホーム</title>
+  <title>SEETONA 繝帙・繝</title>
   <meta
     name="description"
-    content="短いロゴとゲーム棚を組み合わせた、SEETONA のホームページ。"
+    content="3D繝ｭ繧ｴ繧定ｧｦ縺｣縺ｦ蝗槭＠縲√◎縺ｮ縺ｾ縺ｾ繧ｲ繝ｼ繝譽壹°繧峨・繧､繝ｳ繧ｹ繧､繝ｼ繝代・繧・ヰ繧､繝翫Μ繧ｷ繝溘Η繝ｬ繝ｼ繧ｷ繝ｧ繝ｳ繧帝∈縺ｹ繧・SEETONA 縺ｮ繝帙・繝繝壹・繧ｸ縺ｧ縺吶・
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=20260308g">
+  <link rel="stylesheet" href="./styles.css?v=20260309a">
 </head>
 <body>
   <div class="page-shell">
@@ -33,9 +33,9 @@
 
       <div class="header-tools">
         <nav class="site-nav" data-i18n="navAria" data-i18n-attr="aria-label">
+          <a href="#play" data-i18n="navPlay">Games</a>
           <a href="#motion" data-i18n="navMotion">Motion</a>
           <a href="#signal" data-i18n="navSignal">Signal</a>
-          <a href="#play" data-i18n="navPlay">Games</a>
           <a href="#launch" data-i18n="navLaunch">Launch</a>
         </nav>
 
@@ -53,93 +53,12 @@
     </header>
 
     <main id="top">
-      <section class="hero">
-        <div class="hero-copy fade-rise">
-          <p class="eyebrow" data-i18n="heroEyebrow">HOME / PLAYGROUND</p>
-          <h1 data-i18n="heroTitle">短いロゴと小さなゲーム棚。</h1>
-          <p class="lead" data-i18n="heroLead">
-            長すぎる見た目は削り、回して触ってすぐ遊べる形に寄せたトップページです。
-          </p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="#motion" data-i18n="heroPrimaryAction">ロゴを見る</a>
-            <a class="button button-ghost" href="#play" data-i18n="heroSecondaryAction">ゲーム棚へ</a>
-          </div>
-          <ul class="hero-metrics">
-            <li>
-              <strong>01</strong>
-              <span data-i18n="heroMetric1">短い 3D ロゴ</span>
-            </li>
-            <li>
-              <strong>02</strong>
-              <span data-i18n="heroMetric2">上下左右に 360 度回転</span>
-            </li>
-            <li>
-              <strong>03</strong>
-              <span data-i18n="heroMetric3">ゲームを棚から選べる</span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="hero-scene fade-rise" id="motion">
-          <div class="scene-card">
-            <div class="scene-meta">
-              <div class="scene-badge" data-i18n="sceneBadge">FREE ROTATION</div>
-              <div class="scene-note" data-i18n="sceneNote">drag / swipe / spin</div>
-            </div>
-            <div class="orbit-stage" id="orbit-stage">
-              <canvas
-                id="seeton-canvas"
-                role="img"
-                data-i18n="orbitAria"
-                data-i18n-attr="aria-label"
-                aria-label="自由に回転する短い立体ロゴ"
-              ></canvas>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="signal-grid" id="signal">
-        <div class="section-head">
-          <p class="panel-label" data-i18n="signalSectionLabel">SIGNAL</p>
-          <h2 data-i18n="signalSectionTitle">やることを先に見せる。</h2>
-          <p class="section-copy" data-i18n="signalSectionBody">
-            ロゴ、棚、ゲーム本体の順で視線が落ちるようにして、遊びたい人が迷わない構成にしています。
-          </p>
-        </div>
-
-        <article class="signal-card">
-          <p class="panel-label" data-i18n="signalCard1Label">LOGO</p>
-          <h3 data-i18n="signalCard1Title">横に伸びすぎない</h3>
-          <p data-i18n="signalCard1Body">
-            文字数を絞って、透明な付属物も外したので、最初に見える形が素直です。
-          </p>
-        </article>
-
-        <article class="signal-card">
-          <p class="panel-label" data-i18n="signalCard2Label">GAMES</p>
-          <h3 data-i18n="signalCard2Title">棚から選ぶ</h3>
-          <p data-i18n="signalCard2Body">
-            マインスイーパーを主役にしつつ、次の候補も同じ棚に並べて全体像を見せます。
-          </p>
-        </article>
-
-        <article class="signal-card">
-          <p class="panel-label" data-i18n="signalCard3Label">LOAD</p>
-          <h3 data-i18n="signalCard3Title">待ち時間を見せる</h3>
-          <p data-i18n="signalCard3Body">
-            Python 側の処理が終わるまで、読み込み表示を出して状態を明確にします。
-          </p>
-        </article>
-      </section>
-
       <section class="game-hub" id="play">
         <div class="section-head play-head">
           <p class="panel-label" data-i18n="playSectionLabel">GAME SHELF</p>
-          <h2 data-i18n="playSectionTitle">たくさんあるゲームから選ぶ。</h2>
+          <h1 data-i18n="playSectionTitle">驕翫・繧ｲ繝ｼ繝繧帝∈縺ｶ縲・/h1>
           <p class="section-copy" data-i18n="playSectionBody">
-            まずは小さいマインスイーパーを遊べる状態にして、テトリスとソリティアは予告として並べています。
-          </p>
+            縺・∪驕翫∋繧九ｂ縺ｮ縺ｨ縲∵ｬ｡縺ｫ荳ｦ縺ｹ繧倶ｺ亥ｮ壹・繧ゅ・繧貞酔縺俶｣壹↓鄂ｮ縺・※縺・∪縺吶・          </p>
         </div>
 
         <div class="game-library" data-i18n="gameLibraryAria" data-i18n-attr="aria-label">
@@ -157,8 +76,63 @@
               <span></span><span></span><span class="is-open n1">1</span><span></span><span></span>
               <span></span><span></span><span></span><span></span><span></span>
             </div>
-            <strong data-i18n="gameMinesTitle">マインスイーパー</strong>
-            <p data-i18n="gameMinesBody">小さい盤面でさっと遊べる、今すぐ起動できるゲーム。</p>
+            <strong data-i18n="gameMinesTitle">繝槭う繝ｳ繧ｹ繧､繝ｼ繝代・</strong>
+            <p data-i18n="gameMinesBody">縺昴・縺ｾ縺ｾ隱ｭ縺ｿ霎ｼ繧薙〒驕翫∋繧九∵怙蛻昴・蟶ｸ險ｭ繧ｲ繝ｼ繝縺ｧ縺吶・/p>
+          </button>
+
+          <button
+            type="button"
+            class="game-select-card"
+            data-game-select="binary"
+            aria-pressed="false"
+          >
+            <span class="game-chip live" data-i18n="gameBinaryChip">PLAYABLE</span>
+            <div class="thumb thumb-binary" aria-hidden="true">
+              <span class="binary-line"></span>
+              <span class="binary-dot a"></span>
+              <span class="binary-dot b"></span>
+              <span class="binary-dot c"></span>
+              <span class="binary-pill up">UP</span>
+              <span class="binary-pill down">DOWN</span>
+            </div>
+            <strong data-i18n="gameBinaryTitle">繝舌う繝翫Μ繧ｷ繝溘Η繝ｬ繝ｼ繧ｷ繝ｧ繝ｳ</strong>
+            <p data-i18n="gameBinaryBody">100荳・・縺九ｉ蟋九ａ繧九・夊ｲｨ騾｣蜍輔・繝舌う繝翫Μ邱ｴ鄙呈棧縺ｧ縺吶・/p>
+          </button>
+
+          <button
+            type="button"
+            class="game-select-card"
+            data-game-select="planet"
+            aria-pressed="false"
+          >
+            <span class="game-chip soon" data-i18n="gamePlanetChip">COMING SOON</span>
+            <div class="thumb thumb-planet" aria-hidden="true">
+              <span class="orbit orbit-a"></span>
+              <span class="orbit orbit-b"></span>
+              <span class="planet-core"></span>
+              <span class="planet-dot dot-a"></span>
+              <span class="planet-dot dot-b"></span>
+            </div>
+            <strong data-i18n="gamePlanetTitle">諠第弌繧ｷ繝溘Η繝ｬ繝ｼ繧ｷ繝ｧ繝ｳ</strong>
+            <p data-i18n="gamePlanetBody">驥榊鴨繧・ｻ碁％繧定ｧｦ縺｣縺ｦ驕翫・譫繧貞・縺ｫ鄂ｮ縺・※縺・∪縺吶・/p>
+          </button>
+
+          <button
+            type="button"
+            class="game-select-card"
+            data-game-select="management"
+            aria-pressed="false"
+          >
+            <span class="game-chip soon" data-i18n="gameManagementChip">COMING SOON</span>
+            <div class="thumb thumb-management" aria-hidden="true">
+              <span class="bar bar-a"></span>
+              <span class="bar bar-b"></span>
+              <span class="bar bar-c"></span>
+              <span class="bar bar-d"></span>
+              <span class="ledger"></span>
+            </div>
+            <strong data-i18n="gameManagementTitle">邨悟霧繧ｷ繝溘Η繝ｬ繝ｼ繧ｷ繝ｧ繝ｳ</strong>
+            <p data-i18n="gameManagementBody">謨ｰ蟄励ｒ莨ｸ縺ｰ縺励↑縺後ｉ蠎励ｄ莨夂､ｾ繧貞屓縺呎棧縺ｧ縺吶・/p>
           </button>
 
           <button
@@ -180,8 +154,8 @@
               <span class="block c"></span>
               <span class="block c"></span>
             </div>
-            <strong data-i18n="gameTetrisTitle">テトリス</strong>
-            <p data-i18n="gameTetrisBody">落ち物枠。棚には置いておいて、実装は次段階で入れる。</p>
+            <strong data-i18n="gameTetrisTitle">繝・ヨ繝ｪ繧ｹ</strong>
+            <p data-i18n="gameTetrisBody">關ｽ縺｡迚ｩ繧ｲ繝ｼ繝縺ｮ譫縲ゅ≠縺ｨ縺ｧ譽壹↓蟾ｮ縺苓ｾｼ縺ｿ縺ｾ縺吶・/p>
           </button>
 
           <button
@@ -196,8 +170,8 @@
               <span class="card front"></span>
               <span class="card front top"></span>
             </div>
-            <strong data-i18n="gameSolitaireTitle">ソリティア</strong>
-            <p data-i18n="gameSolitaireBody">落ち着いた一人遊び枠。後から入れても相性がいい。</p>
+            <strong data-i18n="gameSolitaireTitle">繧ｽ繝ｪ繝・ぅ繧｢</strong>
+            <p data-i18n="gameSolitaireBody">關ｽ縺｡逹縺・※驕翫∋繧倶ｸ莠ｺ逕ｨ繧ｲ繝ｼ繝縺ｮ譫縺ｧ縺吶・/p>
           </button>
         </div>
 
@@ -205,27 +179,26 @@
           <div class="active-game-head">
             <div>
               <p class="panel-label" data-i18n="gamePanelLabel">NOW PLAYING</p>
-              <h3 id="selected-game-title">マインスイーパー</h3>
+              <h2 id="selected-game-title">繝槭う繝ｳ繧ｹ繧､繝ｼ繝代・</h2>
               <p id="selected-game-copy" class="selected-game-copy">
-                小さい盤面でさっと遊べる、今すぐ起動できるゲーム。
-              </p>
+                譽壹°繧蛾∈繧薙□繧ｲ繝ｼ繝縺ｮ謫堺ｽ懆ｪｬ譏弱→迥ｶ諷九ｒ縺薙％縺ｫ縺ｾ縺ｨ繧√∪縺吶・              </p>
             </div>
             <span id="selected-game-badge" class="game-chip live">PLAYABLE</span>
           </div>
 
-          <div class="game-toolbar" id="game-toolbar">
+          <div class="game-toolbar" id="mines-toolbar">
             <div class="toolbar-row">
               <div class="game-stats">
                 <div class="metric-card">
-                  <span class="metric-label" data-i18n="gameStatusLabel">状態</span>
-                  <strong id="status-text">待機中</strong>
+                  <span class="metric-label" data-i18n="gameStatusLabel">迥ｶ諷・/span>
+                  <strong id="status-text">蠕・ｩ滉ｸｭ</strong>
                 </div>
                 <div class="metric-card">
-                  <span class="metric-label" data-i18n="gameFlagsLabel">残り旗</span>
+                  <span class="metric-label" data-i18n="gameFlagsLabel">譌玲ｮ九ｊ</span>
                   <strong id="flags-left">0</strong>
                 </div>
                 <div class="metric-card">
-                  <span class="metric-label" data-i18n="gameClearedLabel">クリア</span>
+                  <span class="metric-label" data-i18n="gameClearedLabel">繧ｯ繝ｪ繧｢</span>
                   <strong id="cleared-count">0/0</strong>
                 </div>
               </div>
@@ -233,48 +206,64 @@
               <div class="difficulty-cluster" id="difficulty-cluster">
                 <span class="tool-label" data-i18n="gameDifficultyLabel">DIFFICULTY</span>
                 <div class="difficulty-picker">
-                  <button type="button" data-difficulty="easy" class="active" data-i18n="gameDifficultyEasy">小</button>
-                  <button type="button" data-difficulty="medium" data-i18n="gameDifficultyMedium">中</button>
-                  <button type="button" data-difficulty="hard" data-i18n="gameDifficultyHard">大</button>
+                  <button type="button" data-difficulty="easy" class="active" data-i18n="gameDifficultyEasy">蟆・/button>
+                  <button type="button" data-difficulty="medium" data-i18n="gameDifficultyMedium">荳ｭ</button>
+                  <button type="button" data-difficulty="hard" data-i18n="gameDifficultyHard">螟ｧ</button>
                 </div>
               </div>
             </div>
 
             <div class="toolbar-row toolbar-notes">
               <div class="control-copy">
-                <p data-i18n="gameControlReveal">左クリックまたはタップで開く。</p>
-                <p data-i18n="gameControlFlag">右クリックまたは長押しで旗を置く。</p>
+                <p data-i18n="gameControlReveal">蟾ｦ繧ｯ繝ｪ繝・け縺ｾ縺溘・繧ｿ繝・・縺ｧ髢九￥縲・/p>
+                <p data-i18n="gameControlFlag">蜿ｳ繧ｯ繝ｪ繝・け縺ｾ縺溘・髟ｷ謚ｼ縺励〒譌励ｒ鄂ｮ縺上・/p>
               </div>
               <div class="game-actions">
-                <button type="button" id="load-game-button" class="button button-primary" data-i18n="gameStart">
-                  ゲームを読み込む
-                </button>
                 <button type="button" id="restart-button" class="button button-ghost" data-i18n="gameRestart">
-                  新しい盤面
+                  譁ｰ縺励＞逶､髱｢
                 </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="game-toolbar" id="binary-toolbar" hidden>
+            <div class="toolbar-row">
+              <div class="game-stats binary-stats">
+                <div class="metric-card">
+                  <span class="metric-label" data-i18n="binaryBalanceLabel">谿矩ｫ・/span>
+                  <strong id="binary-balance">ﾂ･0</strong>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label" data-i18n="binaryQuoteLabel">迴ｾ蝨ｨ蛟､</span>
+                  <strong id="binary-quote">--</strong>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label" data-i18n="binaryProviderLabel">繝ｬ繝ｼ繝・/span>
+                  <strong id="binary-provider">--</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="toolbar-row toolbar-notes">
+              <div class="control-copy">
+                <p id="binary-status-line" data-i18n="binaryStatusDefault">騾夊ｲｨ繝壹い繧帝∈繧薙〒蛻､螳壽婿蜷代ｒ豎ｺ繧√∪縺吶・/p>
+                <p id="binary-provider-line" data-i18n="binaryProviderDefault">
+                  繝ｩ繧､繝悶Ξ繝ｼ繝医′菴ｿ縺医ｋ縺ｨ縺阪□縺大ｮ溷｣ｲ雋ｷ繧呈怏蜉ｹ縺ｫ縺励∪縺吶・                </p>
               </div>
             </div>
           </div>
 
           <div class="game-surface">
             <div class="game-placeholder" id="game-placeholder">
-              <div class="thumb thumb-minesweeper thumb-large" aria-hidden="true">
-                <span></span><span></span><span></span><span></span><span></span>
-                <span></span><span class="is-open n1">1</span><span class="is-open n2">2</span><span></span><span></span>
-                <span></span><span class="is-flag">!</span><span class="is-open n3">3</span><span></span><span></span>
-                <span></span><span></span><span class="is-open n1">1</span><span></span><span></span>
-                <span></span><span></span><span></span><span></span><span></span>
-              </div>
-              <h4 id="game-placeholder-title">マインスイーパー</h4>
-              <p id="game-placeholder-copy">
-                棚から選んだあとに読み込むと、ここに小さい盤面が出ます。
-              </p>
+              <div id="game-placeholder-thumb" class="placeholder-thumb"></div>
+              <h3 id="game-placeholder-title">繝槭う繝ｳ繧ｹ繧､繝ｼ繝代・繧定ｪｭ縺ｿ霎ｼ縺ｿ荳ｭ</h3>
+              <p id="game-placeholder-copy">譽壹°繧蛾∈繧薙□繧ｲ繝ｼ繝縺ｮ貅門ｙ繧貞ｧ九ａ縺ｾ縺吶・/p>
             </div>
 
             <div class="game-loading" id="game-loading" hidden>
               <span class="loading-spinner"></span>
-              <strong data-i18n="gameLoading">読み込み中...</strong>
-              <p data-i18n="gameLoadingDetail">Python の処理が終わるまで少し待ってください。</p>
+              <strong data-i18n="gameLoading">隱ｭ縺ｿ霎ｼ縺ｿ荳ｭ...</strong>
+              <p data-i18n="gameLoadingDetail">Python 蛛ｴ縺ｮ蜃ｦ逅・′謨ｴ縺・∪縺ｧ蟆代＠蠕・▲縺ｦ縺上□縺輔＞縲・/p>
             </div>
 
             <div class="game-board-wrap" id="game-board-wrap" hidden>
@@ -284,37 +273,147 @@
                 aria-live="polite"
                 data-i18n="gameBoardAria"
                 data-i18n-attr="aria-label"
-                aria-label="マインスイーパーの盤面"
+                aria-label="繝槭う繝ｳ繧ｹ繧､繝ｼ繝代・縺ｮ逶､髱｢"
               ></div>
             </div>
+
+            <section class="binary-panel" id="binary-panel" hidden>
+              <div class="binary-trade-grid">
+                <article class="binary-card">
+                  <p class="tool-label" data-i18n="binaryPairLabel">PAIR</p>
+                  <div class="binary-pill-row" id="binary-pair-picker"></div>
+                </article>
+
+                <article class="binary-card">
+                  <p class="tool-label" data-i18n="binaryDurationLabel">DURATION</p>
+                  <div class="binary-pill-row" id="binary-duration-picker"></div>
+                </article>
+
+                <article class="binary-card">
+                  <p class="tool-label" data-i18n="binaryStakeLabel">STAKE</p>
+                  <div class="binary-pill-row" id="binary-stake-presets"></div>
+                  <label class="binary-input">
+                    <span data-i18n="binaryStakeCustom">繧ｫ繧ｹ繧ｿ繝驥鷹｡・/span>
+                    <input
+                      type="number"
+                      id="binary-stake-input"
+                      min="1000"
+                      step="1000"
+                      inputmode="numeric"
+                      value="10000"
+                    >
+                  </label>
+                </article>
+              </div>
+
+              <div class="binary-actions">
+                <button type="button" id="binary-up-button" class="button button-primary" data-i18n="binaryActionUp">
+                  荳翫′繧・                </button>
+                <button type="button" id="binary-down-button" class="button button-ghost" data-i18n="binaryActionDown">
+                  荳九′繧・                </button>
+                <button type="button" id="binary-reset-button" class="button button-ghost" data-i18n="binaryReset">
+                  谿矩ｫ倥ｒ繝ｪ繧ｻ繝・ヨ
+                </button>
+              </div>
+
+              <p class="binary-market-note" id="binary-market-note" data-i18n="binaryProviderDefault">
+                繝ｩ繧､繝悶Ξ繝ｼ繝医′菴ｿ縺医ｋ縺ｨ縺阪□縺大ｮ溷｣ｲ雋ｷ繧呈怏蜉ｹ縺ｫ縺励∪縺吶・              </p>
+
+              <div class="binary-columns">
+                <article class="binary-list-card">
+                  <div class="binary-card-head">
+                    <span class="panel-label" data-i18n="binaryOpenLabel">OPEN</span>
+                    <h3 data-i18n="binaryOpenTitle">騾ｲ陦御ｸｭ繝昴ず繧ｷ繝ｧ繝ｳ</h3>
+                  </div>
+                  <ul class="binary-list" id="binary-open-list"></ul>
+                </article>
+
+                <article class="binary-list-card">
+                  <div class="binary-card-head">
+                    <span class="panel-label" data-i18n="binaryHistoryLabel">HISTORY</span>
+                    <h3 data-i18n="binaryHistoryTitle">逶ｴ霑代・邨先棡</h3>
+                  </div>
+                  <ul class="binary-list" id="binary-history-list"></ul>
+                </article>
+              </div>
+            </section>
           </div>
         </section>
+      </section>
+
+      <section class="hero" id="motion">
+        <div class="hero-scene fade-rise">
+          <div class="scene-card">
+            <div class="scene-meta">
+              <div class="scene-badge" data-i18n="sceneBadge">FREE ROTATION</div>
+              <div class="scene-note" data-i18n="sceneNote">drag / swipe / spin</div>
+            </div>
+            <div class="orbit-stage" id="orbit-stage">
+              <canvas
+                id="seeton-canvas"
+                role="img"
+                data-i18n="orbitAria"
+                data-i18n-attr="aria-label"
+                aria-label="閾ｪ逕ｱ縺ｫ蝗槭○繧・SEETON 縺ｮ 3D 繝ｭ繧ｴ"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="signal-grid" id="signal">
+        <div class="section-head">
+          <p class="panel-label" data-i18n="signalSectionLabel">SIGNAL</p>
+          <h2 data-i18n="signalSectionTitle">菴輔′驕翫∋繧九°繧貞・縺ｫ隕九○繧九・/h2>
+          <p class="section-copy" data-i18n="signalSectionBody">
+            荳翫°繧画｣壹√・繝ｬ繧､逕ｻ髱｢縲√Ο繧ｴ縺ｮ鬆・〒隕九∴繧九・縺ｧ縲∬ｧｦ縺｣縺ｦ縺吶＄驕翫∋繧区ｧ区・縺ｧ縺吶・          </p>
+        </div>
+
+        <article class="signal-card">
+          <p class="panel-label" data-i18n="signalCard1Label">SHELF</p>
+          <h3 data-i18n="signalCard1Title">隍・焚繧ｲ繝ｼ繝繧呈怙蛻昴°繧我ｸｦ縺ｹ繧・/h3>
+          <p data-i18n="signalCard1Body">
+            繝励Ξ繧､荳ｭ縺ｮ繧ゅ・縺ｨ縲∵ｬ｡縺ｫ霑ｽ蜉縺吶ｋ繧ゅ・繧貞酔縺俶｣壹〒隕九○縺ｾ縺吶・          </p>
+        </article>
+
+        <article class="signal-card">
+          <p class="panel-label" data-i18n="signalCard2Label">LOAD</p>
+          <h3 data-i18n="signalCard2Title">驕ｸ繧薙□譎らせ縺ｧ貅門ｙ繧貞ｧ九ａ繧・/h3>
+          <p data-i18n="signalCard2Body">
+            繧ｵ繝繝阪う繝ｫ繧呈款縺励◆繧峨√◎縺ｮ蝣ｴ縺ｧ隱ｭ縺ｿ霎ｼ縺ｿ縺ｫ蜈･繧翫∝ｾ・■譎る俣繧定｡ｨ遉ｺ縺励∪縺吶・          </p>
+        </article>
+
+        <article class="signal-card">
+          <p class="panel-label" data-i18n="signalCard3Label">FX</p>
+          <h3 data-i18n="signalCard3Title">騾夊ｲｨ騾｣蜍輔・譫繧ょ酔縺伜ｴ謇縺ｧ驕翫・</h3>
+          <p data-i18n="signalCard3Body">
+            繝舌う繝翫Μ繧ｷ繝溘Η繝ｬ繝ｼ繧ｷ繝ｧ繝ｳ縺ｯ繧ｵ繝ｼ繝舌・蛛ｴ縺ｧ繝ｬ繝ｼ繝医ｒ蜿門ｾ励＠縺ｦ迥ｶ諷九ｒ謖√■縺ｾ縺吶・          </p>
+        </article>
       </section>
 
       <section class="launch-panel" id="launch">
         <div class="launch-copy">
           <p class="panel-label" data-i18n="launchLabel">LAUNCH</p>
-          <h2 data-i18n="launchTitle">今は棚を作って、順番に足す。</h2>
+          <h2 data-i18n="launchTitle">譽壹ｒ蠅励ｄ縺励↑縺後ｉ繝帙・繝繧定ご縺ｦ繧九・/h2>
           <p data-i18n="launchBody">
-            マインスイーパーを先に成立させて、他のゲームは coming soon として並べると、次に何を入れるかが見えやすくなります。
-          </p>
+            縺・∪縺ｯ繝槭う繝ｳ繧ｹ繧､繝ｼ繝代・縺ｨ繝舌う繝翫Μ縺悟虚縺阪∽ｻ悶・繧ｲ繝ｼ繝縺ｯ谺｡縺ｮ霑ｽ蜉蛟呵｣懊→縺励※荳ｦ縺ｹ縺ｦ縺・∪縺吶・          </p>
         </div>
 
         <ol class="flow-list">
           <li>
             <strong>01</strong>
-            <span data-i18n="flow1Label">View</span>
-            <p data-i18n="flow1Body">短いロゴを触って、サイトの空気を掴む。</p>
+            <span data-i18n="flow1Label">Choose</span>
+            <p data-i18n="flow1Body">譽壹°繧峨ご繝ｼ繝繧帝∈縺ｶ縺ｨ縲√◎縺ｮ蝣ｴ縺ｧ貅門ｙ縺悟ｧ九∪繧翫∪縺吶・/p>
           </li>
           <li>
             <strong>02</strong>
-            <span data-i18n="flow2Label">Choose</span>
-            <p data-i18n="flow2Body">ゲーム棚から遊びたい要素を選ぶ。</p>
+            <span data-i18n="flow2Label">Watch</span>
+            <p data-i18n="flow2Body">隱ｭ縺ｿ霎ｼ縺ｿ荳ｭ縺九√∪縺譛ｪ螳溯｣・°繧貞酔縺倡判髱｢縺ｧ蛻､譁ｭ縺ｧ縺阪∪縺吶・/p>
           </li>
           <li>
             <strong>03</strong>
             <span data-i18n="flow3Label">Play</span>
-            <p data-i18n="flow3Body">読み込み表示を見ながら、遊べる状態まで待てる。</p>
+            <p data-i18n="flow3Body">繝励Ξ繧､逕ｻ髱｢縺ｯ荳企Κ縺ｫ隱ｬ譏弱→謫堺ｽ懊∽ｸ矩Κ縺ｫ繧ｲ繝ｼ繝譛ｬ菴薙ｒ鄂ｮ縺・※縺・∪縺吶・/p>
           </li>
         </ol>
       </section>
@@ -324,13 +423,13 @@
       <div>
         <p class="panel-label" data-i18n="footerLabel">SEETONA</p>
         <p class="footer-title" data-i18n="footerTitle">
-          ロゴ、棚、小さいゲームを一つの面にまとめたホーム。
-        </p>
+          繝ｭ繧ｴ縲√ご繝ｼ繝譽壹∝ｮ滄圀縺ｫ驕翫∋繧狗判髱｢繧剃ｸ縺､縺ｫ縺ｾ縺ｨ繧√◆繝帙・繝縲・        </p>
       </div>
-      <a class="footer-link" href="#top" data-i18n="footerLink">先頭へ戻る</a>
+      <a class="footer-link" href="#top" data-i18n="footerLink">蜈磯ｭ縺ｸ謌ｻ繧・/a>
     </footer>
   </div>
 
-  <script type="module" src="app.js?v=20260308g"></script>
+  <script type="module" src="./app.js?v=20260309a"></script>
 </body>
 </html>
+
