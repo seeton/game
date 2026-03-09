@@ -6,18 +6,29 @@ const DEFAULT_LANGUAGE = "ja";
 const DEFAULT_GAME = "minesweeper";
 const DEFAULT_DIFFICULTY = "easy";
 const DEFAULT_BINARY_SYMBOL = "USD/JPY";
-const DEFAULT_BINARY_DURATION = 60;
-const DEFAULT_BINARY_STAKE = 10_000;
-const BINARY_STAKE_PRESETS = [5_000, 10_000, 30_000, 50_000];
+const DEFAULT_BINARY_DURATION = 10;
+const DEFAULT_BINARY_STAKE = 5_000;
+const BINARY_STAKE_PRESETS = [1_000, 3_000, 5_000, 10_000];
+const BINARY_CHART_WINDOW_SECONDS = 30;
 const LANGUAGE_STORAGE_KEY = "seetona-language";
 const BINARY_POLL_MS = 1_000;
+const FISHING_SCAN_MS = 1_400;
+
+const FISHING_ZONES = [
+  { id: "north-reef", ja: "北の暗礁帯", en: "North reef line" },
+  { id: "east-current", ja: "東の潮目", en: "Eastern current seam" },
+  { id: "south-shelf", ja: "南の大陸棚", en: "South shelf edge" },
+  { id: "west-bank", ja: "西の浅瀬帯", en: "West shoal bank" },
+  { id: "deep-channel", ja: "沖の深み筋", en: "Offshore deep channel" },
+  { id: "harbor-mouth", ja: "湾口の流入帯", en: "Harbor mouth flow" },
+];
 
 const GAME_LIBRARY = {
   minesweeper: { available: true },
   binary: { available: true },
+  fishing: { available: true },
   planet: { available: false },
   management: { available: false },
-  tetris: { available: false },
   solitaire: { available: false },
 };
 
@@ -86,19 +97,58 @@ const COPY = {
     gameMinesBody: "そのまま読み込んで遊べる、最初の常設ゲームです。",
     gameBinaryChip: "PLAYABLE",
     gameBinaryTitle: "バイナリシミュレーション",
-    gameBinaryBody: "昨日までの為替データから毎日3ケースを作る、再生型のバイナリ練習枠です。",
+    gameBinaryBody: "10万円から始めて、昨日までの為替データを1秒ごとに再生する練習用バイナリです。",
+    gameFishingChip: "PLAYABLE",
+    gameFishingTitle: "漁業シミュレーション",
+    gameFishingBody: "ソナーで魚群を探し、向かうか別海域を探すかを決める探索ゲームです。",
     gamePlanetChip: "COMING SOON",
     gamePlanetTitle: "惑星シミュレーション",
     gamePlanetBody: "重力や軌道を触って遊ぶ枠を先に置いています。",
     gameManagementChip: "COMING SOON",
     gameManagementTitle: "経営シミュレーション",
     gameManagementBody: "数字を伸ばしながら店や会社を回す枠です。",
-    gameTetrisChip: "COMING SOON",
-    gameTetrisTitle: "テトリス",
-    gameTetrisBody: "落ち物ゲームの枠。あとで棚に差し込みます。",
     gameSolitaireChip: "COMING SOON",
     gameSolitaireTitle: "ソリティア",
     gameSolitaireBody: "落ち着いて遊べる一人用ゲームの枠です。",
+    fishingSweepsLabel: "SWEEPS",
+    fishingSignalLabel: "SIGNAL",
+    fishingDecisionLabel: "DECISION",
+    fishingControlScan: "ソナーで海域を走査して魚群反応を探す。",
+    fishingControlDecision: "反応が出たら向かうか、別の場所を探すかを決める。",
+    fishingScanAction: "ソナーを走らせる",
+    fishingGoAction: "この群れに向かう",
+    fishingSearchAction: "別の場所を探す",
+    fishingPanelLabel: "SONAR",
+    fishingPanelTitle: "魚群探知",
+    fishingPanelAria: "漁業シミュレーションのソナー画面",
+    fishingSignalScaleLabel: "SIGNAL SCALE",
+    fishingSignalScaleTitle: "魚群の見え方 5段階",
+    fishingLogLabel: "SCAN LOG",
+    fishingLogTitle: "直近の探知",
+    fishingLogEmpty: "まだ探知記録はありません。",
+    fishingTargetNone: "まだ魚群は見つかっていません。",
+    fishingTargetPending: "海底地形と反応波形を照合しています。",
+    fishingTargetCommitted: "この群れへ向かうルートを確保しました。漁は次の工程で実装します。",
+    fishingTargetTemplate: "{zone} / {distance} km / {signal}",
+    fishingStatusCopyIdle: "ソナーを走らせて最初の魚群反応を探してください。",
+    fishingStatusCopyScanning: "魚群探知中です。波形が固まるまで少し待ってください。",
+    fishingStatusCopyDetected: "魚群反応を捕捉しました。向かうか、別の場所を探すかを選んでください。",
+    fishingStatusCopyCommitted: "目的海域を固定しました。実際の漁アクションは次の実装で追加します。",
+    fishingDecisionStandby: "待機",
+    fishingDecisionScanning: "走査中",
+    fishingDecisionPending: "判断待ち",
+    fishingDecisionGo: "向かう",
+    fishingDecisionSearch: "再探索",
+    fishingStatusIdle: "未探知",
+    fishingStatusScanning: "走査中",
+    fishingStatusDetected: "探知済み",
+    fishingStatusCommitted: "進路確保",
+    fishingSignalNone: "未探知",
+    fishingSignalStage1: "少量に見える",
+    fishingSignalStage2: "少なめに見える",
+    fishingSignalStage3: "中くらいに見える",
+    fishingSignalStage4: "多めに見える",
+    fishingSignalStage5: "大量に見える",
     binaryBalanceLabel: "残高",
     binaryQuoteLabel: "現在値",
     binaryProviderLabel: "レート",
@@ -108,10 +158,15 @@ const COPY = {
     binaryStakeCustom: "カスタム金額",
     binaryActionUp: "上がる",
     binaryActionDown: "下がる",
-    binaryReset: "残高をリセット",
-    binaryStatusDefault: "通貨ペアごとに1日1ケースを再生します。",
+    binaryStatusDefault: "通貨ペアごとに1日1ケースをチャートで再生します。",
     binaryProviderDefault: "昨日までの実データから作った疑似リアルタイムケースです。",
-    binaryCaseStatus: "{symbol} / 元データ {date} / {elapsed}秒経過",
+    binaryCaseStatus: "{symbol} / 元データ {date} / {elapsed}秒 / {total}秒",
+    binaryChartLabel: "CHART",
+    binaryChartTitle: "ケースグラフ",
+    binaryChartAria: "バイナリシミュレーションの価格グラフ",
+    binaryChartNow: "現在 {price}",
+    binaryChartRange: "安値 {min} / 高値 {max}",
+    binaryChartPending: "グラフ準備中",
     binaryOpenLabel: "OPEN",
     binaryOpenTitle: "進行中ポジション",
     binaryHistoryLabel: "HISTORY",
@@ -149,9 +204,16 @@ const COPY = {
       },
       binary: {
         panelTitle: "バイナリシミュレーション",
-        panelBody: "100万円から始めて、昨日までの為替データを再生した1日3ケースで上下判定を試せます。",
+        panelBody: "10万円から始めて、昨日までの為替データを再生した1日3ケースで上下判定を試せます。",
         promptTitle: "バイナリシミュレーションを読み込み中",
         promptBody: "通貨ペアと口座状態を読み込みます。",
+        badge: "PLAYABLE",
+      },
+      fishing: {
+        panelTitle: "漁業シミュレーション",
+        panelBody: "まずはソナーで魚群を探し、向かうか再探索するかを決める最初の工程を遊べます。",
+        promptTitle: "漁業シミュレーションを準備中",
+        promptBody: "ソナー画面を立ち上げています。",
         badge: "PLAYABLE",
       },
       planet: {
@@ -166,13 +228,6 @@ const COPY = {
         panelBody: "お金と資源を回しながら伸ばしていく枠です。まだ未実装です。",
         promptTitle: "経営シミュレーションは準備中",
         promptBody: "数字を積み上げる系の遊び場は次の候補です。",
-        badge: "COMING SOON",
-      },
-      tetris: {
-        panelTitle: "テトリス",
-        panelBody: "棚には並べていますが、まだ遊べません。",
-        promptTitle: "テトリスは準備中",
-        promptBody: "落ち物ゲームの枠は確保済みです。",
         badge: "COMING SOON",
       },
       solitaire: {
@@ -292,19 +347,58 @@ const COPY = {
     gameMinesBody: "The first permanent game and ready to launch immediately.",
     gameBinaryChip: "PLAYABLE",
     gameBinaryTitle: "Binary Simulation",
-    gameBinaryBody: "A replay-style binary practice mode that builds three daily cases from historical FX data.",
+    gameBinaryBody: "A 100,000 JPY practice wallet that replays historical FX data second by second.",
+    gameFishingChip: "PLAYABLE",
+    gameFishingTitle: "Fishing Simulation",
+    gameFishingBody: "Sweep with sonar, find a school, then decide whether to head there or search elsewhere.",
     gamePlanetChip: "COMING SOON",
     gamePlanetTitle: "Planet Simulation",
     gamePlanetBody: "A future slot for orbit and gravity play.",
     gameManagementChip: "COMING SOON",
     gameManagementTitle: "Management Simulation",
     gameManagementBody: "A future slot for building a company through numbers.",
-    gameTetrisChip: "COMING SOON",
-    gameTetrisTitle: "Tetris",
-    gameTetrisBody: "The falling-block slot is reserved for later.",
     gameSolitaireChip: "COMING SOON",
     gameSolitaireTitle: "Solitaire",
     gameSolitaireBody: "A calm single-player slot that will come later.",
+    fishingSweepsLabel: "SWEEPS",
+    fishingSignalLabel: "SIGNAL",
+    fishingDecisionLabel: "DECISION",
+    fishingControlScan: "Run sonar to scan a new patch of water.",
+    fishingControlDecision: "Once a school appears, choose whether to head there or keep searching.",
+    fishingScanAction: "Run sonar",
+    fishingGoAction: "Head to this school",
+    fishingSearchAction: "Search elsewhere",
+    fishingPanelLabel: "SONAR",
+    fishingPanelTitle: "School detection",
+    fishingPanelAria: "Sonar screen for the fishing simulation",
+    fishingSignalScaleLabel: "SIGNAL SCALE",
+    fishingSignalScaleTitle: "Five signal levels",
+    fishingLogLabel: "SCAN LOG",
+    fishingLogTitle: "Recent detections",
+    fishingLogEmpty: "No sonar detections yet.",
+    fishingTargetNone: "No fish school is locked yet.",
+    fishingTargetPending: "Matching seabed echoes and fish marks...",
+    fishingTargetCommitted: "The route to this school is locked. The actual catch flow comes next.",
+    fishingTargetTemplate: "{zone} / {distance} km / {signal}",
+    fishingStatusCopyIdle: "Run sonar to look for the first fish school.",
+    fishingStatusCopyScanning: "The sonar is sweeping. Wait for the waveform to settle.",
+    fishingStatusCopyDetected: "A school was found. Decide whether to head there or search somewhere else.",
+    fishingStatusCopyCommitted: "The route is fixed. The actual fishing action will be added next.",
+    fishingDecisionStandby: "Standby",
+    fishingDecisionScanning: "Scanning",
+    fishingDecisionPending: "Awaiting choice",
+    fishingDecisionGo: "Heading there",
+    fishingDecisionSearch: "Search again",
+    fishingStatusIdle: "No mark",
+    fishingStatusScanning: "Scanning",
+    fishingStatusDetected: "Detected",
+    fishingStatusCommitted: "Route locked",
+    fishingSignalNone: "No mark",
+    fishingSignalStage1: "Very light marks",
+    fishingSignalStage2: "Light marks",
+    fishingSignalStage3: "Moderate marks",
+    fishingSignalStage4: "Heavy marks",
+    fishingSignalStage5: "Dense school",
     binaryBalanceLabel: "Balance",
     binaryQuoteLabel: "Quote",
     binaryProviderLabel: "Feed",
@@ -314,10 +408,15 @@ const COPY = {
     binaryStakeCustom: "Custom amount",
     binaryActionUp: "Higher",
     binaryActionDown: "Lower",
-    binaryReset: "Reset balance",
-    binaryStatusDefault: "Each pair replays one daily case.",
+    binaryStatusDefault: "Each pair replays one daily case as a chart.",
     binaryProviderDefault: "This is a pseudo-real-time case built from historical data up to yesterday.",
-    binaryCaseStatus: "{symbol} / source {date} / {elapsed}s elapsed",
+    binaryCaseStatus: "{symbol} / source {date} / {elapsed}s / {total}s",
+    binaryChartLabel: "CHART",
+    binaryChartTitle: "Case chart",
+    binaryChartAria: "Price chart for the binary simulation",
+    binaryChartNow: "Now {price}",
+    binaryChartRange: "Low {min} / High {max}",
+    binaryChartPending: "Preparing chart",
     binaryOpenLabel: "OPEN",
     binaryOpenTitle: "Open positions",
     binaryHistoryLabel: "HISTORY",
@@ -355,9 +454,16 @@ const COPY = {
       },
       binary: {
         panelTitle: "Binary Simulation",
-        panelBody: "Start with 1,000,000 JPY and try higher/lower positions inside three daily replay cases built from historical FX data.",
+        panelBody: "Start with 100,000 JPY and try higher/lower positions inside three daily replay cases built from historical FX data.",
         promptTitle: "Loading Binary Simulation",
         promptBody: "The panel is fetching the account state and quote feed.",
+        badge: "PLAYABLE",
+      },
+      fishing: {
+        panelTitle: "Fishing Simulation",
+        panelBody: "The first playable step is sonar detection: find a school, then decide whether to head there or search again.",
+        promptTitle: "Loading Fishing Simulation",
+        promptBody: "Preparing the sonar view.",
         badge: "PLAYABLE",
       },
       planet: {
@@ -372,13 +478,6 @@ const COPY = {
         panelBody: "A future slot for growing a company through money and resources.",
         promptTitle: "Management Simulation is coming soon",
         promptBody: "The management slot is reserved but not implemented yet.",
-        badge: "COMING SOON",
-      },
-      tetris: {
-        panelTitle: "Tetris",
-        panelBody: "The slot is on the shelf but the game is not ready yet.",
-        promptTitle: "Tetris is coming soon",
-        promptBody: "The falling-block slot is reserved for a later pass.",
         badge: "COMING SOON",
       },
       solitaire: {
@@ -450,6 +549,7 @@ const selectedGameBadge = document.getElementById("selected-game-badge");
 
 const minesToolbar = document.getElementById("mines-toolbar");
 const binaryToolbar = document.getElementById("binary-toolbar");
+const fishingToolbar = document.getElementById("fishing-toolbar");
 const difficultyCluster = document.getElementById("difficulty-cluster");
 const restartButton = document.getElementById("restart-button");
 
@@ -466,6 +566,7 @@ const flagsElement = document.getElementById("flags-left");
 const clearedElement = document.getElementById("cleared-count");
 
 const binaryPanel = document.getElementById("binary-panel");
+const fishingPanel = document.getElementById("fishing-panel");
 const binaryBalance = document.getElementById("binary-balance");
 const binaryQuote = document.getElementById("binary-quote");
 const binaryProvider = document.getElementById("binary-provider");
@@ -477,10 +578,31 @@ const binaryStakePresets = document.getElementById("binary-stake-presets");
 const binaryStakeInput = document.getElementById("binary-stake-input");
 const binaryUpButton = document.getElementById("binary-up-button");
 const binaryDownButton = document.getElementById("binary-down-button");
-const binaryResetButton = document.getElementById("binary-reset-button");
 const binaryMarketNote = document.getElementById("binary-market-note");
+const binaryChartPath = document.getElementById("binary-chart-path");
+const binaryChartFuture = document.getElementById("binary-chart-future");
+const binaryChartProgress = document.getElementById("binary-chart-progress");
+const binaryChartPoint = document.getElementById("binary-chart-point");
+const binaryChartNow = document.getElementById("binary-chart-now");
+const binaryChartRange = document.getElementById("binary-chart-range");
+const binaryChartMin = document.getElementById("binary-chart-min");
+const binaryChartMax = document.getElementById("binary-chart-max");
+const binaryChartTicks = Array.from(document.querySelectorAll("[data-binary-chart-tick]"));
 const binaryOpenList = document.getElementById("binary-open-list");
 const binaryHistoryList = document.getElementById("binary-history-list");
+const fishingSweeps = document.getElementById("fishing-sweeps");
+const fishingSignal = document.getElementById("fishing-signal");
+const fishingDecision = document.getElementById("fishing-decision");
+const fishingScanButton = document.getElementById("fishing-scan-button");
+const fishingGoButton = document.getElementById("fishing-go-button");
+const fishingSearchButton = document.getElementById("fishing-search-button");
+const fishingPanelCopy = document.getElementById("fishing-panel-copy");
+const fishingSonarStage = document.getElementById("fishing-sonar-stage");
+const fishingSonarBlips = document.getElementById("fishing-sonar-blips");
+const fishingTargetTitle = document.getElementById("fishing-target-title");
+const fishingTargetMeta = document.getElementById("fishing-target-meta");
+const fishingSignalScale = document.getElementById("fishing-signal-scale");
+const fishingLogList = document.getElementById("fishing-log-list");
 
 const appEndpoint = new URL("./app.xcg", window.location.href);
 
@@ -497,6 +619,10 @@ let binaryTransientMessage = null;
 let binarySelectedSymbol = DEFAULT_BINARY_SYMBOL;
 let binarySelectedDuration = DEFAULT_BINARY_DURATION;
 let binaryPollTimer = null;
+let binaryPlaybackFrame = null;
+let binaryPreviousState = null;
+let binaryStateTransitionStartedAt = 0;
+let fishingState = createInitialFishingState();
 
 applyTranslations();
 syncDifficultyButtons();
@@ -569,12 +695,16 @@ binaryDownButton.addEventListener("click", async () => {
   }
 });
 
-binaryResetButton.addEventListener("click", async () => {
-  try {
-    await resetBinarySimulation();
-  } catch (error) {
-    showBinaryError(error);
-  }
+fishingScanButton.addEventListener("click", () => {
+  void runFishingScan();
+});
+
+fishingGoButton.addEventListener("click", () => {
+  lockFishingTarget();
+});
+
+fishingSearchButton.addEventListener("click", () => {
+  void runFishingScan(true);
 });
 
 function loadLanguage() {
@@ -644,6 +774,7 @@ function selectGame(gameId) {
   binaryTransientMessage = null;
   if (selectedGame !== "binary") {
     stopBinaryPolling();
+    stopBinaryPlaybackLoop();
   }
   renderGameShell();
   maybeAutoLoadSelectedGame();
@@ -675,6 +806,7 @@ function renderGameShell() {
   const isPlayable = Boolean(libraryEntry && libraryEntry.available);
   const isMinesweeper = selectedGame === "minesweeper";
   const isBinary = selectedGame === "binary";
+  const isFishing = selectedGame === "fishing";
 
   selectedGameTitle.textContent = gameCopy.panelTitle;
   selectedGameCopy.textContent = gameCopy.panelBody;
@@ -689,6 +821,7 @@ function renderGameShell() {
 
   minesToolbar.hidden = !isMinesweeper;
   binaryToolbar.hidden = !isBinary;
+  fishingToolbar.hidden = !isFishing;
   difficultyCluster.hidden = !isMinesweeper;
   restartButton.hidden = !isMinesweeper;
   restartButton.disabled = isGameLoading || !hasLoadedMinesweeper;
@@ -696,6 +829,7 @@ function renderGameShell() {
   syncDifficultyButtons();
 
   if (!isPlayable) {
+    stopBinaryPlaybackLoop();
     gameLoading.hidden = true;
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
@@ -705,11 +839,24 @@ function renderGameShell() {
     return;
   }
 
+  if (isFishing) {
+    stopBinaryPlaybackLoop();
+    gamePlaceholder.hidden = true;
+    gameLoading.hidden = true;
+    boardWrap.hidden = true;
+    binaryPanel.hidden = true;
+    fishingPanel.hidden = false;
+    renderFishingPanel();
+    return;
+  }
+
   if (isGameLoading) {
+    stopBinaryPlaybackLoop();
     gamePlaceholder.hidden = true;
     gameLoading.hidden = false;
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
+    fishingPanel.hidden = true;
     renderIdleStats();
     return;
   }
@@ -717,9 +864,11 @@ function renderGameShell() {
   gameLoading.hidden = true;
 
   if (isMinesweeper && hasLoadedMinesweeper && currentState) {
+    stopBinaryPlaybackLoop();
     gamePlaceholder.hidden = true;
     boardWrap.hidden = false;
     binaryPanel.hidden = true;
+    fishingPanel.hidden = true;
     renderMinesweeper();
     return;
   }
@@ -728,6 +877,7 @@ function renderGameShell() {
     gamePlaceholder.hidden = true;
     boardWrap.hidden = true;
     binaryPanel.hidden = false;
+    fishingPanel.hidden = true;
     renderBinaryPanel();
     return;
   }
@@ -735,6 +885,8 @@ function renderGameShell() {
   gamePlaceholder.hidden = false;
   boardWrap.hidden = true;
   binaryPanel.hidden = true;
+  fishingPanel.hidden = true;
+  stopBinaryPlaybackLoop();
   renderPlaceholder(
     gameCopy.promptTitle,
     isMinesweeper && minesTransientMessage
@@ -767,6 +919,287 @@ function renderIdleStats() {
     : getText("gameIdleStatus");
   flagsElement.textContent = "0";
   clearedElement.textContent = "0/0";
+}
+
+function createInitialFishingState() {
+  return {
+    status: "idle",
+    sweeps: 0,
+    decision: "standby",
+    detection: null,
+    log: [],
+  };
+}
+
+async function runFishingScan(forceNewZone = false) {
+  if (fishingState.status === "scanning") {
+    return;
+  }
+
+  fishingState = {
+    ...fishingState,
+    status: "scanning",
+    decision: "scanning",
+  };
+  renderGameShell();
+
+  await sleep(FISHING_SCAN_MS);
+
+  const detection = generateFishingDetection(forceNewZone);
+  fishingState = {
+    ...fishingState,
+    status: "detected",
+    sweeps: fishingState.sweeps + 1,
+    decision: "pending",
+    detection,
+    log: [
+      {
+        id: `${Date.now()}-${fishingState.sweeps + 1}`,
+        zoneId: detection.zoneId,
+        signalLevel: detection.signalLevel,
+        distanceKm: detection.distanceKm,
+      },
+      ...fishingState.log,
+    ].slice(0, 5),
+  };
+  renderGameShell();
+}
+
+function lockFishingTarget() {
+  if (!fishingState.detection || fishingState.status === "scanning") {
+    return;
+  }
+
+  fishingState = {
+    ...fishingState,
+    status: "committed",
+    decision: "go",
+  };
+  renderGameShell();
+}
+
+function generateFishingDetection(forceNewZone) {
+  const currentZoneId = fishingState.detection?.zoneId || null;
+  const availableZones = forceNewZone
+    ? FISHING_ZONES.filter((zone) => zone.id !== currentZoneId)
+    : FISHING_ZONES;
+  const zonePool = availableZones.length > 0 ? availableZones : FISHING_ZONES;
+  const zone = zonePool[Math.floor(Math.random() * zonePool.length)];
+  const signalLevel = rollFishingSignalLevel();
+  const distanceKm = Number((0.8 + (Math.random() * 4.4)).toFixed(1));
+
+  return {
+    zoneId: zone.id,
+    signalLevel,
+    distanceKm,
+    blips: createFishingBlips(signalLevel),
+  };
+}
+
+function rollFishingSignalLevel() {
+  const roll = Math.random();
+  if (roll < 0.08) {
+    return 5;
+  }
+  if (roll < 0.24) {
+    return 4;
+  }
+  if (roll < 0.56) {
+    return 3;
+  }
+  if (roll < 0.82) {
+    return 2;
+  }
+  return 1;
+}
+
+function createFishingBlips(signalLevel) {
+  const countMap = { 1: 2, 2: 4, 3: 6, 4: 8, 5: 11 };
+  const clusterAngle = Math.random() * Math.PI * 2;
+  const clusterRadius = 14 + (Math.random() * 20);
+  const clusterX = 50 + (Math.cos(clusterAngle) * clusterRadius);
+  const clusterY = 50 + (Math.sin(clusterAngle) * clusterRadius);
+  const count = countMap[signalLevel] || 3;
+
+  return Array.from({ length: count }, () => {
+    const offsetAngle = Math.random() * Math.PI * 2;
+    const offsetRadius = Math.random() * (8 + (signalLevel * 2));
+    const x = clamp(clusterX + (Math.cos(offsetAngle) * offsetRadius), 12, 88);
+    const y = clamp(clusterY + (Math.sin(offsetAngle) * offsetRadius), 12, 88);
+    return {
+      x,
+      y,
+      size: 7 + signalLevel + (Math.random() * 5),
+      alpha: 0.4 + (signalLevel * 0.08) + (Math.random() * 0.16),
+    };
+  });
+}
+
+function renderFishingPanel() {
+  const isScanning = fishingState.status === "scanning";
+  const detection = fishingState.detection;
+  const signalLevel = detection?.signalLevel || 0;
+  const zoneLabel = detection ? getFishingZoneLabel(detection.zoneId) : "";
+
+  fishingSweeps.textContent = formatInteger(fishingState.sweeps);
+  fishingSignal.textContent = signalLevel ? getFishingSignalLabel(signalLevel) : getText("fishingSignalNone");
+  fishingDecision.textContent = getFishingDecisionLabel();
+  fishingScanButton.disabled = isScanning;
+  fishingGoButton.disabled = isScanning || !detection;
+  fishingSearchButton.disabled = isScanning || !detection;
+
+  if (isScanning) {
+    fishingPanelCopy.textContent = getText("fishingStatusCopyScanning");
+    fishingTargetTitle.textContent = getText("fishingTargetPending");
+    fishingTargetMeta.textContent = getText("fishingControlDecision");
+  } else if (detection) {
+    fishingTargetTitle.textContent = zoneLabel;
+    fishingTargetMeta.textContent = template(getText("fishingTargetTemplate"), {
+      zone: zoneLabel,
+      distance: formatDistanceKm(detection.distanceKm),
+      signal: getFishingSignalLabel(signalLevel),
+    });
+    fishingPanelCopy.textContent =
+      fishingState.status === "committed"
+        ? getText("fishingStatusCopyCommitted")
+        : getText("fishingStatusCopyDetected");
+  } else {
+    fishingPanelCopy.textContent = getText("fishingStatusCopyIdle");
+    fishingTargetTitle.textContent = getText("fishingTargetNone");
+    fishingTargetMeta.textContent = getText("fishingControlScan");
+  }
+
+  if (fishingState.status === "committed") {
+    fishingTargetMeta.textContent = `${fishingTargetMeta.textContent}  ${getText("fishingTargetCommitted")}`;
+  }
+
+  fishingSonarStage.classList.toggle("is-scanning", isScanning);
+  fishingSonarStage.classList.toggle("has-target", Boolean(detection));
+  fishingSonarStage.classList.toggle("is-committed", fishingState.status === "committed");
+
+  renderFishingSignalScale();
+  renderFishingSonarBlips();
+  renderFishingLog();
+}
+
+function renderFishingSignalScale() {
+  fishingSignalScale.replaceChildren();
+  [5, 4, 3, 2, 1].forEach((level) => {
+    const item = document.createElement("li");
+    item.className = "fishing-signal-item";
+    if (fishingState.detection?.signalLevel === level) {
+      item.classList.add("is-active");
+    }
+
+    const rank = document.createElement("span");
+    rank.className = "fishing-signal-rank";
+    rank.textContent = String(level).padStart(2, "0");
+
+    const bar = document.createElement("div");
+    bar.className = "fishing-signal-bar";
+    const fill = document.createElement("span");
+    fill.style.width = `${level * 20}%`;
+    bar.appendChild(fill);
+
+    const label = document.createElement("strong");
+    label.textContent = getFishingSignalLabel(level);
+
+    item.append(rank, bar, label);
+    fishingSignalScale.appendChild(item);
+  });
+}
+
+function renderFishingSonarBlips() {
+  fishingSonarBlips.replaceChildren();
+
+  if (fishingState.status === "scanning") {
+    for (let index = 0; index < 4; index += 1) {
+      const ghost = document.createElement("span");
+      ghost.className = "sonar-blip is-ghost";
+      ghost.style.left = `${22 + (index * 16)}%`;
+      ghost.style.top = `${28 + ((index % 2) * 18)}%`;
+      ghost.style.width = "10px";
+      ghost.style.height = "10px";
+      ghost.style.animationDelay = `${index * 180}ms`;
+      fishingSonarBlips.appendChild(ghost);
+    }
+    return;
+  }
+
+  const blips = fishingState.detection?.blips || [];
+  blips.forEach((blip, index) => {
+    const node = document.createElement("span");
+    node.className = "sonar-blip";
+    node.style.left = `${blip.x}%`;
+    node.style.top = `${blip.y}%`;
+    node.style.width = `${blip.size}px`;
+    node.style.height = `${blip.size}px`;
+    node.style.opacity = String(blip.alpha);
+    node.style.animationDelay = `${index * 140}ms`;
+    fishingSonarBlips.appendChild(node);
+  });
+}
+
+function renderFishingLog() {
+  fishingLogList.replaceChildren();
+  if (fishingState.log.length === 0) {
+    const emptyItem = document.createElement("li");
+    emptyItem.className = "binary-empty";
+    emptyItem.textContent = getText("fishingLogEmpty");
+    fishingLogList.appendChild(emptyItem);
+    return;
+  }
+
+  fishingState.log.forEach((entry, index) => {
+    const item = document.createElement("li");
+
+    const top = document.createElement("div");
+    top.className = "fishing-log-top";
+
+    const zone = document.createElement("strong");
+    zone.textContent = getFishingZoneLabel(entry.zoneId);
+
+    const signal = document.createElement("span");
+    signal.className = "fishing-log-signal";
+    signal.textContent = getFishingSignalLabel(entry.signalLevel);
+
+    top.append(zone, signal);
+
+    const bottom = document.createElement("div");
+    bottom.className = "fishing-log-bottom";
+    bottom.textContent = `#${String(fishingState.sweeps - index).padStart(2, "0")} / ${formatDistanceKm(entry.distanceKm)} km`;
+
+    item.append(top, bottom);
+    fishingLogList.appendChild(item);
+  });
+}
+
+function getFishingSignalLabel(level) {
+  return getText(`fishingSignalStage${level}`) || getText("fishingSignalNone");
+}
+
+function getFishingDecisionLabel() {
+  if (fishingState.status === "scanning") {
+    return getText("fishingDecisionScanning");
+  }
+  if (fishingState.status === "committed") {
+    return getText("fishingDecisionGo");
+  }
+  if (fishingState.detection) {
+    return getText("fishingDecisionPending");
+  }
+  if (fishingState.decision === "search") {
+    return getText("fishingDecisionSearch");
+  }
+  return getText("fishingDecisionStandby");
+}
+
+function getFishingZoneLabel(zoneId) {
+  const zone = FISHING_ZONES.find((entry) => entry.id === zoneId);
+  if (!zone) {
+    return zoneId;
+  }
+  return currentLanguage === "ja" ? zone.ja : zone.en;
 }
 
 function syncDifficultyButtons() {
@@ -804,11 +1237,13 @@ async function parseJson(response) {
 
 async function requestJson(action, payload = null, extraQuery = {}) {
   let response;
+  const requestQuery = payload ? extraQuery : { ...extraQuery, _: Date.now() };
   try {
-    response = await fetch(apiUrl(action, extraQuery), {
+    response = await fetch(apiUrl(action, requestQuery), {
       method: payload ? "POST" : "GET",
       headers: payload ? { "Content-Type": "application/json" } : undefined,
       body: payload ? JSON.stringify(payload) : undefined,
+      cache: "no-store",
     });
   } catch {
     throw new Error("Request failed");
@@ -954,9 +1389,7 @@ async function loadBinaryState() {
   renderGameShell();
 
   try {
-    binaryState = await requestJson("binary_state", null, { symbol: binarySelectedSymbol });
-    hasLoadedBinary = true;
-    binarySelectedSymbol = binaryState.selectedSymbol || binarySelectedSymbol;
+    applyBinaryState(await requestJson("binary_state", null, { symbol: binarySelectedSymbol }));
     if (Array.isArray(binaryState.durations) && !binaryState.durations.includes(binarySelectedDuration)) {
       binarySelectedDuration = binaryState.defaultDuration || DEFAULT_BINARY_DURATION;
     }
@@ -970,9 +1403,7 @@ async function loadBinaryState() {
 }
 
 async function refreshBinaryState() {
-  binaryState = await requestJson("binary_state", null, { symbol: binarySelectedSymbol });
-  hasLoadedBinary = true;
-  binarySelectedSymbol = binaryState.selectedSymbol || binarySelectedSymbol;
+  applyBinaryState(await requestJson("binary_state", null, { symbol: binarySelectedSymbol }));
   renderBinaryPanel();
 }
 
@@ -981,30 +1412,37 @@ async function placeBinaryTrade(direction) {
     return;
   }
   const stake = getCurrentStake();
-  binaryState = await requestJson("binary_trade", {
+  applyBinaryState(await requestJson("binary_trade", {
     symbol: binarySelectedSymbol,
     direction,
     stake,
     duration: binarySelectedDuration,
-  });
-  hasLoadedBinary = true;
+  }));
   binaryTransientMessage = "binaryTradePlaced";
   renderBinaryPanel();
 }
 
-async function resetBinarySimulation() {
-  binaryState = await requestJson("binary_reset", { symbol: binarySelectedSymbol });
+function applyBinaryState(nextState) {
+  const sameSymbol =
+    Boolean(binaryState) &&
+    Boolean(nextState) &&
+    binaryState.selectedSymbol === nextState.selectedSymbol;
+  binaryPreviousState = sameSymbol ? binaryState : null;
+  binaryState = nextState;
+  binaryStateTransitionStartedAt = performance.now();
   hasLoadedBinary = true;
-  binaryTransientMessage = null;
-  renderBinaryPanel();
+  binarySelectedSymbol = binaryState.selectedSymbol || binarySelectedSymbol;
 }
 
 function renderBinarySummary() {
   const providerName = binaryState?.provider?.name || getText("binaryProviderNameUnavailable");
   const providerCode = binaryState?.provider?.code || "unavailable";
   const caseInfo = binaryState?.caseInfo || null;
+  const playback = getBinaryPlaybackView();
   binaryBalance.textContent = formatYen(binaryState?.balance ?? 0);
-  binaryQuote.textContent = binaryState?.quote?.displayPrice || "--";
+  binaryQuote.textContent = playback
+    ? formatBinaryPrice(playback.price, playback.digits)
+    : binaryState?.quote?.displayPrice || "--";
   binaryProvider.textContent = providerLabel(providerName, providerCode);
   binaryStatusLine.textContent = binaryTransientMessage
     ? getText(binaryTransientMessage)
@@ -1012,7 +1450,8 @@ function renderBinarySummary() {
       ? template(getText("binaryCaseStatus"), {
           symbol: caseInfo.symbol,
           date: caseInfo.referenceDate,
-          elapsed: caseInfo.elapsedSeconds,
+          elapsed: playback ? formatBinaryElapsed(playback.elapsedExact) : caseInfo.elapsedSeconds,
+          total: caseInfo.totalSeconds,
         })
       : getText("binaryStatusDefault");
   binaryProviderLine.textContent = composeBinaryNotice(binaryState);
@@ -1026,11 +1465,11 @@ function renderBinaryPanel() {
 
   renderBinarySummary();
   renderBinaryControls();
+  renderBinaryChart();
 
   const tradingEnabled = Boolean(binaryState.tradingEnabled);
   binaryUpButton.disabled = isGameLoading || !tradingEnabled;
   binaryDownButton.disabled = isGameLoading || !tradingEnabled;
-  binaryResetButton.disabled = isGameLoading;
 
   renderBinaryList(
     binaryOpenList,
@@ -1044,6 +1483,7 @@ function renderBinaryPanel() {
     getText("binaryHistoryEmpty"),
     renderHistoryItem,
   );
+  startBinaryPlaybackLoop();
 }
 
 function renderBinaryControls() {
@@ -1101,6 +1541,156 @@ function renderBinaryControls() {
       renderBinaryControls();
     });
     binaryStakePresets.appendChild(button);
+  });
+}
+
+function renderBinaryChart() {
+  const chart = binaryState?.chart;
+  const playback = getBinaryPlaybackView();
+  if (!chart || !playback || !Array.isArray(chart.history) || chart.history.length === 0) {
+    binaryChartPath.setAttribute("d", "");
+    binaryChartFuture.setAttribute("d", "");
+    binaryChartProgress.setAttribute("x1", "0");
+    binaryChartProgress.setAttribute("x2", "0");
+    binaryChartPoint.setAttribute("cx", "0");
+    binaryChartPoint.setAttribute("cy", "0");
+    binaryChartNow.textContent = getText("binaryChartPending");
+    binaryChartRange.textContent = getText("binaryChartPending");
+    binaryChartMin.textContent = "--";
+    binaryChartMax.textContent = "--";
+    binaryChartTicks.forEach((tick) => {
+      tick.textContent = "--:--:--";
+    });
+    return;
+  }
+
+  const windowPoints = playback.windowPoints;
+  const minPrice = Math.min(...windowPoints.map((point) => point.price));
+  const maxPrice = Math.max(...windowPoints.map((point) => point.price));
+  const spread = Math.max(maxPrice - minPrice, Number.EPSILON);
+  const points = windowPoints.map((point) => {
+    const x = playback.windowSpan <= 0
+      ? 100
+      : (((point.elapsed - playback.windowStartElapsed) / playback.windowSpan) * 100);
+    const y = 30 - (((point.price - minPrice) / spread) * 24);
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+  const currentPoint = points.length > 0 ? points[points.length - 1].split(",") : ["0", "0"];
+  const progressX = currentPoint[0];
+  const digits = playback.digits;
+
+  binaryChartPath.setAttribute("d", buildPolylinePath(points));
+  binaryChartFuture.setAttribute("d", "");
+  binaryChartProgress.setAttribute("x1", progressX);
+  binaryChartProgress.setAttribute("x2", progressX);
+  binaryChartPoint.setAttribute("cx", currentPoint[0]);
+  binaryChartPoint.setAttribute("cy", currentPoint[1]);
+  binaryChartNow.textContent = template(getText("binaryChartNow"), {
+    price: formatBinaryPrice(playback.price, digits),
+  });
+  binaryChartRange.textContent = template(getText("binaryChartRange"), {
+    min: formatBinaryPrice(minPrice, digits),
+    max: formatBinaryPrice(maxPrice, digits),
+  });
+  binaryChartMin.textContent = formatBinaryPrice(minPrice, digits);
+  binaryChartMax.textContent = formatBinaryPrice(maxPrice, digits);
+  renderBinaryChartTicks(playback.windowStartElapsed, playback.windowEndElapsed);
+}
+
+function buildPolylinePath(points) {
+  if (!points || points.length === 0) {
+    return "";
+  }
+  return `M ${points[0]}${points.slice(1).map((point) => ` L ${point}`).join("")}`;
+}
+
+function getBinaryPlaybackView() {
+  const chart = binaryState?.chart;
+  const caseInfo = binaryState?.caseInfo;
+  if (!chart || !Array.isArray(chart.history) || chart.history.length === 0) {
+    return null;
+  }
+
+  const history = chart.history.map((value) => Number(value));
+  const totalSeconds = Number(chart.totalSeconds) || Math.max(0, history.length - 1);
+  const currentElapsed = Math.max(0, Math.min(Number(chart.elapsedSeconds) || 0, totalSeconds));
+  const previousElapsed =
+    binaryPreviousState?.selectedSymbol === binaryState?.selectedSymbol
+      ? Math.max(0, Math.min(Number(binaryPreviousState?.chart?.elapsedSeconds) || 0, currentElapsed))
+      : currentElapsed;
+  const transitionRange = Math.max(0, currentElapsed - previousElapsed);
+  const transitionProgress = transitionRange > 0
+    ? Math.min(1, Math.max(0, (performance.now() - binaryStateTransitionStartedAt) / 1000))
+    : 1;
+  const elapsedExact = previousElapsed + (transitionRange * transitionProgress);
+  const lowerIndex = Math.min(Math.floor(elapsedExact), history.length - 1);
+  const upperIndex = Math.min(lowerIndex + 1, history.length - 1);
+  const progress = Math.max(0, Math.min(elapsedExact - lowerIndex, 1));
+  const lowerPrice = history[lowerIndex];
+  const upperPrice = history[upperIndex];
+  const currentPrice = lowerPrice + ((upperPrice - lowerPrice) * progress);
+  const visibleBase = history.slice(0, lowerIndex + 1).map((price, index) => ({
+    elapsed: index,
+    price,
+  }));
+  const animatedPoints =
+    upperIndex > lowerIndex
+      ? [...visibleBase, { elapsed: elapsedExact, price: currentPrice }]
+      : visibleBase;
+  const windowEndElapsed = elapsedExact <= BINARY_CHART_WINDOW_SECONDS
+    ? BINARY_CHART_WINDOW_SECONDS
+    : elapsedExact;
+  const windowStartElapsed = Math.max(0, windowEndElapsed - BINARY_CHART_WINDOW_SECONDS);
+  const windowSpan = Math.max(1, windowEndElapsed - windowStartElapsed);
+  const windowPoints = [
+    {
+      elapsed: windowStartElapsed,
+      price: interpolateBinaryPrice(history, windowStartElapsed),
+    },
+  ];
+  animatedPoints.forEach((point) => {
+    if (point.elapsed > windowStartElapsed && point.elapsed <= elapsedExact) {
+      windowPoints.push(point);
+    }
+  });
+  if (windowPoints[windowPoints.length - 1].elapsed < elapsedExact) {
+    windowPoints.push({ elapsed: elapsedExact, price: currentPrice });
+  }
+
+  return {
+    digits: Number(chart.priceDigits) || 3,
+    elapsedExact,
+    price: currentPrice,
+    windowPoints,
+    windowStartElapsed,
+    windowEndElapsed,
+    windowSpan,
+  };
+}
+
+function interpolateBinaryPrice(history, elapsed) {
+  if (!history.length) {
+    return 0;
+  }
+  const boundedElapsed = Math.max(0, Math.min(elapsed, history.length - 1));
+  const lowerIndex = Math.floor(boundedElapsed);
+  const upperIndex = Math.min(lowerIndex + 1, history.length - 1);
+  const progress = Math.max(0, Math.min(boundedElapsed - lowerIndex, 1));
+  const lowerPrice = history[lowerIndex];
+  const upperPrice = history[upperIndex];
+  return lowerPrice + ((upperPrice - lowerPrice) * progress);
+}
+
+function renderBinaryChartTicks(windowStartElapsed, windowEndElapsed) {
+  if (!binaryChartTicks.length) {
+    return;
+  }
+
+  const tickCount = binaryChartTicks.length;
+  binaryChartTicks.forEach((tick, index) => {
+    const ratio = tickCount === 1 ? 1 : index / (tickCount - 1);
+    const elapsed = windowStartElapsed + ((windowEndElapsed - windowStartElapsed) * ratio);
+    tick.textContent = formatElapsedClock(elapsed);
   });
 }
 
@@ -1210,6 +1800,13 @@ function formatInteger(value) {
   return new Intl.NumberFormat(currentLanguage === "ja" ? "ja-JP" : "en-US").format(value);
 }
 
+function formatDistanceKm(value) {
+  return Number(value || 0).toLocaleString(currentLanguage === "ja" ? "ja-JP" : "en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+}
+
 function formatYen(value, signed = false) {
   const locale = currentLanguage === "ja" ? "ja-JP" : "en-US";
   const formatter = new Intl.NumberFormat(locale, {
@@ -1219,6 +1816,33 @@ function formatYen(value, signed = false) {
     signDisplay: signed ? "always" : "auto",
   });
   return formatter.format(value || 0);
+}
+
+function formatBinaryPrice(value, digits) {
+  return Number(value || 0).toLocaleString(currentLanguage === "ja" ? "ja-JP" : "en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatBinaryElapsed(value) {
+  const locale = currentLanguage === "ja" ? "ja-JP" : "en-US";
+  const rounded = Math.floor((Number(value) || 0) * 10) / 10;
+  const hasFraction = Math.abs(rounded - Math.round(rounded)) > 0.001;
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: hasFraction ? 1 : 0,
+    maximumFractionDigits: 1,
+  }).format(rounded);
+}
+
+function formatElapsedClock(totalSeconds) {
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
+    return "--:--";
+  }
+  const rounded = Math.max(0, Math.round(totalSeconds));
+  const minutes = Math.floor(rounded / 60);
+  const seconds = rounded % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatTime(epochSeconds) {
@@ -1275,6 +1899,41 @@ function stopBinaryPolling() {
     window.clearInterval(binaryPollTimer);
     binaryPollTimer = null;
   }
+}
+
+function startBinaryPlaybackLoop() {
+  if (binaryPlaybackFrame !== null) {
+    return;
+  }
+
+  const tick = () => {
+    if (selectedGame !== "binary" || !binaryState || isGameLoading) {
+      binaryPlaybackFrame = null;
+      return;
+    }
+    renderBinarySummary();
+    renderBinaryChart();
+    binaryPlaybackFrame = window.requestAnimationFrame(tick);
+  };
+
+  binaryPlaybackFrame = window.requestAnimationFrame(tick);
+}
+
+function stopBinaryPlaybackLoop() {
+  if (binaryPlaybackFrame !== null) {
+    window.cancelAnimationFrame(binaryPlaybackFrame);
+    binaryPlaybackFrame = null;
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function showMinesError(error) {

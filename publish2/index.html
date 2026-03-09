@@ -21,7 +21,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="./styles.css?v=20260309a">
+  <link rel="stylesheet" href="./styles.css?v=20260309h">
 </head>
 <body>
   <div class="page-shell">
@@ -96,7 +96,7 @@
               <span class="binary-pill down">DOWN</span>
             </div>
             <strong data-i18n="gameBinaryTitle">繝舌う繝翫Μ繧ｷ繝溘Η繝ｬ繝ｼ繧ｷ繝ｧ繝ｳ</strong>
-            <p data-i18n="gameBinaryBody">100荳・・縺九ｉ蟋九ａ繧九・夊ｲｨ騾｣蜍輔・繝舌う繝翫Μ邱ｴ鄙呈棧縺ｧ縺吶・/p>
+            <p data-i18n="gameBinaryBody">10荳・・縺九ｉ蟋九ａ繧九・夊ｲｨ騾｣蜍輔・繝舌う繝翫Μ邱ｴ鄙呈棧縺ｧ縺吶・/p>
           </button>
 
           <button
@@ -300,24 +300,58 @@
                       min="1000"
                       step="1000"
                       inputmode="numeric"
-                      value="10000"
+                      value="5000"
                     >
                   </label>
                 </article>
               </div>
 
               <div class="binary-actions">
-                <button type="button" id="binary-up-button" class="button button-primary" data-i18n="binaryActionUp">
+                <button type="button" id="binary-up-button" class="button button-binary-up" data-i18n="binaryActionUp">
                   荳翫′繧・                </button>
-                <button type="button" id="binary-down-button" class="button button-ghost" data-i18n="binaryActionDown">
+                <button type="button" id="binary-down-button" class="button button-binary-down" data-i18n="binaryActionDown">
                   荳九′繧・                </button>
-                <button type="button" id="binary-reset-button" class="button button-ghost" data-i18n="binaryReset">
-                  谿矩ｫ倥ｒ繝ｪ繧ｻ繝・ヨ
-                </button>
               </div>
 
               <p class="binary-market-note" id="binary-market-note" data-i18n="binaryProviderDefault">
                 繝ｩ繧､繝悶Ξ繝ｼ繝医′菴ｿ縺医ｋ縺ｨ縺阪□縺大ｮ溷｣ｲ雋ｷ繧呈怏蜉ｹ縺ｫ縺励∪縺吶・              </p>
+
+              <article class="binary-list-card binary-chart-card">
+                <div class="binary-card-head">
+                  <span class="panel-label" data-i18n="binaryChartLabel">CHART</span>
+                  <h3 data-i18n="binaryChartTitle">繧ｱ繝ｼ繧ｹ繧ｰ繝ｩ繝・/h3>
+                </div>
+                <div class="binary-chart-shell">
+                  <span class="binary-chart-edge top" id="binary-chart-max">--</span>
+                  <svg
+                    id="binary-chart"
+                    class="binary-chart"
+                    viewBox="0 0 100 32"
+                    preserveAspectRatio="none"
+                    role="img"
+                    data-i18n="binaryChartAria"
+                    data-i18n-attr="aria-label"
+                    aria-label="繝舌う繝翫Μ繧ｷ繝溘Η繝ｬ繝ｼ繧ｷ繝ｧ繝ｳ縺ｮ萓｡譬ｼ繧ｰ繝ｩ繝・
+                  >
+                    <path class="binary-chart-guide" d="M 0 6 H 100 M 0 16 H 100 M 0 26 H 100"></path>
+                    <path id="binary-chart-future" class="binary-chart-future" d=""></path>
+                    <path id="binary-chart-path" class="binary-chart-path" d=""></path>
+                    <line id="binary-chart-progress" class="binary-chart-progress" x1="0" y1="2" x2="0" y2="30"></line>
+                    <circle id="binary-chart-point" class="binary-chart-point" cx="0" cy="0" r="1.25"></circle>
+                  </svg>
+                  <span class="binary-chart-edge bottom" id="binary-chart-min">--</span>
+                </div>
+                <div class="binary-chart-meta">
+                  <strong id="binary-chart-now">--</strong>
+                  <span id="binary-chart-range">--</span>
+                </div>
+                <div class="binary-chart-axis">
+                  <span data-binary-chart-tick>--:--:--</span>
+                  <span data-binary-chart-tick>--:--:--</span>
+                  <span data-binary-chart-tick>--:--:--</span>
+                  <span data-binary-chart-tick>--:--:--</span>
+                </div>
+              </article>
 
               <div class="binary-columns">
                 <article class="binary-list-card">
@@ -429,7 +463,9 @@
     </footer>
   </div>
 
-  <script type="module" src="./app.js?v=20260309b"></script>
+  <script type="module" src="./app.js?v=20260309i"></script>
 </body>
 </html>
+
+
 

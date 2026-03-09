@@ -262,6 +262,16 @@ main {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.button-binary-up {
+  color: #f4f7fb;
+  background: linear-gradient(135deg, #2f8cff 0%, #68c1ff 100%);
+}
+
+.button-binary-down {
+  color: #fff4f2;
+  background: linear-gradient(135deg, #d14a5f 0%, #ff8973 100%);
+}
+
 .game-hub {
   order: 1;
   display: grid;
@@ -708,6 +718,10 @@ main {
   margin-top: 24px;
 }
 
+.game-toolbar[hidden] {
+  display: none !important;
+}
+
 .game-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -982,6 +996,118 @@ main {
   margin: 0;
 }
 
+.binary-chart-card {
+  overflow: hidden;
+}
+
+.binary-chart-shell {
+  position: relative;
+  margin-top: 16px;
+  min-height: 220px;
+  padding: 16px 16px 16px 56px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 18% 14%, rgba(76, 181, 255, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+}
+
+.binary-chart {
+  display: block;
+  width: 100%;
+  height: 188px;
+}
+
+.binary-chart-guide,
+.binary-chart-future,
+.binary-chart-path,
+.binary-chart-progress {
+  fill: none;
+}
+
+.binary-chart-guide {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 0.45;
+  stroke-dasharray: 1.2 1.6;
+}
+
+.binary-chart-future {
+  stroke: rgba(255, 255, 255, 0.24);
+  stroke-width: 0.95;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.binary-chart-path {
+  stroke: var(--accent);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(126, 248, 221, 0.2));
+}
+
+.binary-chart-progress {
+  stroke: rgba(255, 210, 125, 0.9);
+  stroke-width: 0.55;
+  stroke-dasharray: 1.1 1.8;
+}
+
+.binary-chart-point {
+  fill: var(--accent-warm);
+  stroke: rgba(4, 17, 31, 0.9);
+  stroke-width: 0.35;
+  filter: drop-shadow(0 0 8px rgba(255, 210, 125, 0.28));
+}
+
+.binary-chart-edge,
+.binary-chart-meta span {
+  color: var(--muted);
+  font-family: "Space Mono", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
+.binary-chart-edge {
+  position: absolute;
+  left: 14px;
+}
+
+.binary-chart-edge.top {
+  top: 14px;
+}
+
+.binary-chart-edge.bottom {
+  bottom: 14px;
+}
+
+.binary-chart-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.binary-chart-meta strong {
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.binary-chart-axis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-family: "Space Mono", monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+}
+
+.binary-chart-axis span:last-child {
+  text-align: right;
+}
+
 .binary-columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1175,7 +1301,8 @@ main {
   .toolbar-row,
   .active-game-head,
   .binary-line-top,
-  .binary-line-bottom {
+  .binary-line-bottom,
+  .binary-chart-meta {
     flex-direction: column;
   }
 
@@ -1192,6 +1319,24 @@ main {
   .game-actions .button,
   .binary-actions .button {
     width: 100%;
+  }
+
+  .binary-chart-axis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .binary-chart-axis span:nth-child(even) {
+    text-align: right;
+  }
+
+  .binary-chart-shell {
+    padding-left: 18px;
+  }
+
+  .binary-chart-edge {
+    position: static;
+    display: inline-block;
+    margin-bottom: 8px;
   }
 
   .active-game-shell,

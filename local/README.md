@@ -6,6 +6,8 @@
 
 - `local/webconf.md`
   ホスティング接続情報と運用メモ
+- `local/FTP_DEPLOY_WORKFLOW.md`
+  普段使っている FTP 配備手順
 - `local/ssl/`
   SSL 発行用のスクリプト、仮想環境、証明書生成物
 - `local/SEETONA_SETUP.md`

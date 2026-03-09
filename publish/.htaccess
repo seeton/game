@@ -1,14 +1,11 @@
 RewriteEngine On
 
-RewriteCond %{HTTP_HOST} ^setn\.shop$ [NC]
-RewriteRule ^ https://www.setn.shop%{REQUEST_URI} [R=301,L]
-
-RewriteCond %{HTTP_HOST} ^seetona\.com$ [NC]
+RewriteCond %{HTTP_HOST} ^(setn\.shop|www\.setn\.shop|seetona\.com)$ [NC]
 RewriteRule ^ https://www.seetona.com%{REQUEST_URI} [R=301,L]
 
+RewriteCond %{HTTP_HOST} ^www\.seetona\.com$ [NC]
 RewriteCond %{HTTPS} !=on
-RewriteCond %{HTTP_HOST} ^(www\.setn\.shop|www\.seetona\.com)$ [NC]
-RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+RewriteRule ^ https://www.seetona.com%{REQUEST_URI} [R=301,L]
 
 DirectoryIndex app.xcg index.html
 

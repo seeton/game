@@ -11,17 +11,18 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
-STARTING_BALANCE = 1_000_000
+STARTING_BALANCE = 100_000
 DEFAULT_SYMBOL = "USD/JPY"
-DEFAULT_DURATION = 60
+DEFAULT_DURATION = 10
 DEFAULT_PAYOUT_RATE = Decimal("0.85")
 MIN_STAKE = 1_000
 MAX_HISTORY_ITEMS = 12
-CASE_TOTAL_SECONDS = 180
+CASE_TOTAL_SECONDS = 600
 CASE_SEGMENTS = 6
 HISTORY_LOOKBACK_DAYS = 45
 JST_OFFSET = dt.timedelta(hours=9)
 CASE_CACHE_DIRNAME = "binary_case_cache"
+CASE_FORMAT_VERSION = 3
 
 SYMBOLS = {
     "USD/JPY": {"base": "USD", "quote": "JPY", "digits": 3},
@@ -29,7 +30,7 @@ SYMBOLS = {
     "GBP/JPY": {"base": "GBP", "quote": "JPY", "digits": 3},
 }
 
-DURATIONS = (30, 60, 180)
+DURATIONS = (10, 20, 30)
 DIRECTIONS = {"up", "down"}
 
 
@@ -63,6 +64,23 @@ def _load_cached_cases(runtime_dir, day_key):
         return None
     with open(path, "r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def _is_payload_compatible(payload):
+    if not isinstance(payload, dict):
+        return False
+    if int(payload.get("formatVersion", 0)) != CASE_FORMAT_VERSION:
+        return False
+    cases = payload.get("cases", {})
+    if not isinstance(cases, dict) or not cases:
+        return False
+    for case_payload in cases.values():
+        if int(case_payload.get("totalSeconds", -1)) != CASE_TOTAL_SECONDS:
+            return False
+        series = case_payload.get("series")
+        if not isinstance(series, list) or len(series) != CASE_TOTAL_SECONDS + 1:
+            return False
+    return True
 
 
 def _jst_now(now_epoch=None):
@@ -177,7 +195,8 @@ def _latest_cached_payload(runtime_dir):
     if latest_name is None:
         return None
     with open(os.path.join(_cache_dir(runtime_dir), latest_name), "r", encoding="utf-8") as handle:
-        return json.load(handle)
+        payload = json.load(handle)
+    return payload if _is_payload_compatible(payload) else None
 
 
 def load_daily_cases(runtime_dir, now_epoch=None):
@@ -186,7 +205,9 @@ def load_daily_cases(runtime_dir, now_epoch=None):
     path = _cache_path(runtime_dir, day_key)
     if os.path.isfile(path):
         with open(path, "r", encoding="utf-8") as handle:
-            return json.load(handle)
+            cached_payload = json.load(handle)
+        if _is_payload_compatible(cached_payload):
+            return cached_payload
 
     try:
         end_date = _parse_iso_date(_yesterday_key(now_epoch))
@@ -195,6 +216,7 @@ def load_daily_cases(runtime_dir, now_epoch=None):
             history_points = _fetch_daily_series(symbol, end_date)
             cases[symbol] = _build_case(symbol, history_points, day_key)
         payload = {
+            "formatVersion": CASE_FORMAT_VERSION,
             "dayKey": day_key,
             "provider": {
                 "name": "Historical Replay",
@@ -379,6 +401,8 @@ class BinarySimulation(object):
 
         selected_case = cases_payload["cases"][selected_symbol]
         case_started_at = self.ensure_case_started(selected_symbol, now_epoch)
+        current_elapsed = int(current_quote["elapsedSeconds"])
+        revealed_series = [float(price) for price in selected_case["series"][: current_elapsed + 1]]
         return {
             "balance": self.balance,
             "startingBalance": STARTING_BALANCE,
@@ -395,13 +419,21 @@ class BinarySimulation(object):
             "notices": list(dict.fromkeys(notices or [])),
             "openPositions": public_open_positions,
             "history": public_history,
+            "chart": {
+                "symbol": selected_symbol,
+                "history": revealed_series,
+                "elapsedSeconds": current_elapsed,
+                "totalSeconds": int(selected_case["totalSeconds"]),
+                "priceDigits": int(SYMBOLS[selected_symbol]["digits"]),
+                "currentPrice": str(current_quote["displayPrice"]),
+            },
             "caseInfo": {
                 "symbol": selected_symbol,
                 "referenceDate": selected_case["referenceDate"],
                 "startedAt": case_started_at,
-                "elapsedSeconds": int(current_quote["elapsedSeconds"]),
+                "elapsedSeconds": current_elapsed,
                 "totalSeconds": int(selected_case["totalSeconds"]),
-                "completed": int(current_quote["elapsedSeconds"]) >= int(selected_case["totalSeconds"]),
+                "completed": current_elapsed >= int(selected_case["totalSeconds"]),
             },
         }
 

@@ -6,9 +6,10 @@ const DEFAULT_LANGUAGE = "ja";
 const DEFAULT_GAME = "minesweeper";
 const DEFAULT_DIFFICULTY = "easy";
 const DEFAULT_BINARY_SYMBOL = "USD/JPY";
-const DEFAULT_BINARY_DURATION = 60;
-const DEFAULT_BINARY_STAKE = 10_000;
-const BINARY_STAKE_PRESETS = [5_000, 10_000, 30_000, 50_000];
+const DEFAULT_BINARY_DURATION = 10;
+const DEFAULT_BINARY_STAKE = 5_000;
+const BINARY_STAKE_PRESETS = [1_000, 3_000, 5_000, 10_000];
+const BINARY_CHART_WINDOW_SECONDS = 30;
 const LANGUAGE_STORAGE_KEY = "seetona-language";
 const BINARY_POLL_MS = 1_000;
 
@@ -86,7 +87,7 @@ const COPY = {
     gameMinesBody: "そのまま読み込んで遊べる、最初の常設ゲームです。",
     gameBinaryChip: "PLAYABLE",
     gameBinaryTitle: "バイナリシミュレーション",
-    gameBinaryBody: "昨日までの為替データから毎日3ケースを作る、再生型のバイナリ練習枠です。",
+    gameBinaryBody: "10万円から始めて、昨日までの為替データを1秒ごとに再生する練習用バイナリです。",
     gamePlanetChip: "COMING SOON",
     gamePlanetTitle: "惑星シミュレーション",
     gamePlanetBody: "重力や軌道を触って遊ぶ枠を先に置いています。",
@@ -108,10 +109,15 @@ const COPY = {
     binaryStakeCustom: "カスタム金額",
     binaryActionUp: "上がる",
     binaryActionDown: "下がる",
-    binaryReset: "残高をリセット",
-    binaryStatusDefault: "通貨ペアごとに1日1ケースを再生します。",
+    binaryStatusDefault: "通貨ペアごとに1日1ケースをチャートで再生します。",
     binaryProviderDefault: "昨日までの実データから作った疑似リアルタイムケースです。",
-    binaryCaseStatus: "{symbol} / 元データ {date} / {elapsed}秒経過",
+    binaryCaseStatus: "{symbol} / 元データ {date} / {elapsed}秒 / {total}秒",
+    binaryChartLabel: "CHART",
+    binaryChartTitle: "ケースグラフ",
+    binaryChartAria: "バイナリシミュレーションの価格グラフ",
+    binaryChartNow: "現在 {price}",
+    binaryChartRange: "安値 {min} / 高値 {max}",
+    binaryChartPending: "グラフ準備中",
     binaryOpenLabel: "OPEN",
     binaryOpenTitle: "進行中ポジション",
     binaryHistoryLabel: "HISTORY",
@@ -149,7 +155,7 @@ const COPY = {
       },
       binary: {
         panelTitle: "バイナリシミュレーション",
-        panelBody: "100万円から始めて、昨日までの為替データを再生した1日3ケースで上下判定を試せます。",
+        panelBody: "10万円から始めて、昨日までの為替データを再生した1日3ケースで上下判定を試せます。",
         promptTitle: "バイナリシミュレーションを読み込み中",
         promptBody: "通貨ペアと口座状態を読み込みます。",
         badge: "PLAYABLE",
@@ -292,7 +298,7 @@ const COPY = {
     gameMinesBody: "The first permanent game and ready to launch immediately.",
     gameBinaryChip: "PLAYABLE",
     gameBinaryTitle: "Binary Simulation",
-    gameBinaryBody: "A replay-style binary practice mode that builds three daily cases from historical FX data.",
+    gameBinaryBody: "A 100,000 JPY practice wallet that replays historical FX data second by second.",
     gamePlanetChip: "COMING SOON",
     gamePlanetTitle: "Planet Simulation",
     gamePlanetBody: "A future slot for orbit and gravity play.",
@@ -314,10 +320,15 @@ const COPY = {
     binaryStakeCustom: "Custom amount",
     binaryActionUp: "Higher",
     binaryActionDown: "Lower",
-    binaryReset: "Reset balance",
-    binaryStatusDefault: "Each pair replays one daily case.",
+    binaryStatusDefault: "Each pair replays one daily case as a chart.",
     binaryProviderDefault: "This is a pseudo-real-time case built from historical data up to yesterday.",
-    binaryCaseStatus: "{symbol} / source {date} / {elapsed}s elapsed",
+    binaryCaseStatus: "{symbol} / source {date} / {elapsed}s / {total}s",
+    binaryChartLabel: "CHART",
+    binaryChartTitle: "Case chart",
+    binaryChartAria: "Price chart for the binary simulation",
+    binaryChartNow: "Now {price}",
+    binaryChartRange: "Low {min} / High {max}",
+    binaryChartPending: "Preparing chart",
     binaryOpenLabel: "OPEN",
     binaryOpenTitle: "Open positions",
     binaryHistoryLabel: "HISTORY",
@@ -355,7 +366,7 @@ const COPY = {
       },
       binary: {
         panelTitle: "Binary Simulation",
-        panelBody: "Start with 1,000,000 JPY and try higher/lower positions inside three daily replay cases built from historical FX data.",
+        panelBody: "Start with 100,000 JPY and try higher/lower positions inside three daily replay cases built from historical FX data.",
         promptTitle: "Loading Binary Simulation",
         promptBody: "The panel is fetching the account state and quote feed.",
         badge: "PLAYABLE",
@@ -477,8 +488,16 @@ const binaryStakePresets = document.getElementById("binary-stake-presets");
 const binaryStakeInput = document.getElementById("binary-stake-input");
 const binaryUpButton = document.getElementById("binary-up-button");
 const binaryDownButton = document.getElementById("binary-down-button");
-const binaryResetButton = document.getElementById("binary-reset-button");
 const binaryMarketNote = document.getElementById("binary-market-note");
+const binaryChartPath = document.getElementById("binary-chart-path");
+const binaryChartFuture = document.getElementById("binary-chart-future");
+const binaryChartProgress = document.getElementById("binary-chart-progress");
+const binaryChartPoint = document.getElementById("binary-chart-point");
+const binaryChartNow = document.getElementById("binary-chart-now");
+const binaryChartRange = document.getElementById("binary-chart-range");
+const binaryChartMin = document.getElementById("binary-chart-min");
+const binaryChartMax = document.getElementById("binary-chart-max");
+const binaryChartTicks = Array.from(document.querySelectorAll("[data-binary-chart-tick]"));
 const binaryOpenList = document.getElementById("binary-open-list");
 const binaryHistoryList = document.getElementById("binary-history-list");
 
@@ -497,6 +516,9 @@ let binaryTransientMessage = null;
 let binarySelectedSymbol = DEFAULT_BINARY_SYMBOL;
 let binarySelectedDuration = DEFAULT_BINARY_DURATION;
 let binaryPollTimer = null;
+let binaryPlaybackFrame = null;
+let binaryPreviousState = null;
+let binaryStateTransitionStartedAt = 0;
 
 applyTranslations();
 syncDifficultyButtons();
@@ -569,14 +591,6 @@ binaryDownButton.addEventListener("click", async () => {
   }
 });
 
-binaryResetButton.addEventListener("click", async () => {
-  try {
-    await resetBinarySimulation();
-  } catch (error) {
-    showBinaryError(error);
-  }
-});
-
 function loadLanguage() {
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
   return stored === "en" ? "en" : DEFAULT_LANGUAGE;
@@ -644,6 +658,7 @@ function selectGame(gameId) {
   binaryTransientMessage = null;
   if (selectedGame !== "binary") {
     stopBinaryPolling();
+    stopBinaryPlaybackLoop();
   }
   renderGameShell();
   maybeAutoLoadSelectedGame();
@@ -696,6 +711,7 @@ function renderGameShell() {
   syncDifficultyButtons();
 
   if (!isPlayable) {
+    stopBinaryPlaybackLoop();
     gameLoading.hidden = true;
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
@@ -706,6 +722,7 @@ function renderGameShell() {
   }
 
   if (isGameLoading) {
+    stopBinaryPlaybackLoop();
     gamePlaceholder.hidden = true;
     gameLoading.hidden = false;
     boardWrap.hidden = true;
@@ -717,6 +734,7 @@ function renderGameShell() {
   gameLoading.hidden = true;
 
   if (isMinesweeper && hasLoadedMinesweeper && currentState) {
+    stopBinaryPlaybackLoop();
     gamePlaceholder.hidden = true;
     boardWrap.hidden = false;
     binaryPanel.hidden = true;
@@ -735,6 +753,7 @@ function renderGameShell() {
   gamePlaceholder.hidden = false;
   boardWrap.hidden = true;
   binaryPanel.hidden = true;
+  stopBinaryPlaybackLoop();
   renderPlaceholder(
     gameCopy.promptTitle,
     isMinesweeper && minesTransientMessage
@@ -804,11 +823,13 @@ async function parseJson(response) {
 
 async function requestJson(action, payload = null, extraQuery = {}) {
   let response;
+  const requestQuery = payload ? extraQuery : { ...extraQuery, _: Date.now() };
   try {
-    response = await fetch(apiUrl(action, extraQuery), {
+    response = await fetch(apiUrl(action, requestQuery), {
       method: payload ? "POST" : "GET",
       headers: payload ? { "Content-Type": "application/json" } : undefined,
       body: payload ? JSON.stringify(payload) : undefined,
+      cache: "no-store",
     });
   } catch {
     throw new Error("Request failed");
@@ -954,9 +975,7 @@ async function loadBinaryState() {
   renderGameShell();
 
   try {
-    binaryState = await requestJson("binary_state", null, { symbol: binarySelectedSymbol });
-    hasLoadedBinary = true;
-    binarySelectedSymbol = binaryState.selectedSymbol || binarySelectedSymbol;
+    applyBinaryState(await requestJson("binary_state", null, { symbol: binarySelectedSymbol }));
     if (Array.isArray(binaryState.durations) && !binaryState.durations.includes(binarySelectedDuration)) {
       binarySelectedDuration = binaryState.defaultDuration || DEFAULT_BINARY_DURATION;
     }
@@ -970,9 +989,7 @@ async function loadBinaryState() {
 }
 
 async function refreshBinaryState() {
-  binaryState = await requestJson("binary_state", null, { symbol: binarySelectedSymbol });
-  hasLoadedBinary = true;
-  binarySelectedSymbol = binaryState.selectedSymbol || binarySelectedSymbol;
+  applyBinaryState(await requestJson("binary_state", null, { symbol: binarySelectedSymbol }));
   renderBinaryPanel();
 }
 
@@ -981,30 +998,37 @@ async function placeBinaryTrade(direction) {
     return;
   }
   const stake = getCurrentStake();
-  binaryState = await requestJson("binary_trade", {
+  applyBinaryState(await requestJson("binary_trade", {
     symbol: binarySelectedSymbol,
     direction,
     stake,
     duration: binarySelectedDuration,
-  });
-  hasLoadedBinary = true;
+  }));
   binaryTransientMessage = "binaryTradePlaced";
   renderBinaryPanel();
 }
 
-async function resetBinarySimulation() {
-  binaryState = await requestJson("binary_reset", { symbol: binarySelectedSymbol });
+function applyBinaryState(nextState) {
+  const sameSymbol =
+    Boolean(binaryState) &&
+    Boolean(nextState) &&
+    binaryState.selectedSymbol === nextState.selectedSymbol;
+  binaryPreviousState = sameSymbol ? binaryState : null;
+  binaryState = nextState;
+  binaryStateTransitionStartedAt = performance.now();
   hasLoadedBinary = true;
-  binaryTransientMessage = null;
-  renderBinaryPanel();
+  binarySelectedSymbol = binaryState.selectedSymbol || binarySelectedSymbol;
 }
 
 function renderBinarySummary() {
   const providerName = binaryState?.provider?.name || getText("binaryProviderNameUnavailable");
   const providerCode = binaryState?.provider?.code || "unavailable";
   const caseInfo = binaryState?.caseInfo || null;
+  const playback = getBinaryPlaybackView();
   binaryBalance.textContent = formatYen(binaryState?.balance ?? 0);
-  binaryQuote.textContent = binaryState?.quote?.displayPrice || "--";
+  binaryQuote.textContent = playback
+    ? formatBinaryPrice(playback.price, playback.digits)
+    : binaryState?.quote?.displayPrice || "--";
   binaryProvider.textContent = providerLabel(providerName, providerCode);
   binaryStatusLine.textContent = binaryTransientMessage
     ? getText(binaryTransientMessage)
@@ -1012,7 +1036,8 @@ function renderBinarySummary() {
       ? template(getText("binaryCaseStatus"), {
           symbol: caseInfo.symbol,
           date: caseInfo.referenceDate,
-          elapsed: caseInfo.elapsedSeconds,
+          elapsed: playback ? formatBinaryElapsed(playback.elapsedExact) : caseInfo.elapsedSeconds,
+          total: caseInfo.totalSeconds,
         })
       : getText("binaryStatusDefault");
   binaryProviderLine.textContent = composeBinaryNotice(binaryState);
@@ -1026,11 +1051,11 @@ function renderBinaryPanel() {
 
   renderBinarySummary();
   renderBinaryControls();
+  renderBinaryChart();
 
   const tradingEnabled = Boolean(binaryState.tradingEnabled);
   binaryUpButton.disabled = isGameLoading || !tradingEnabled;
   binaryDownButton.disabled = isGameLoading || !tradingEnabled;
-  binaryResetButton.disabled = isGameLoading;
 
   renderBinaryList(
     binaryOpenList,
@@ -1044,6 +1069,7 @@ function renderBinaryPanel() {
     getText("binaryHistoryEmpty"),
     renderHistoryItem,
   );
+  startBinaryPlaybackLoop();
 }
 
 function renderBinaryControls() {
@@ -1101,6 +1127,156 @@ function renderBinaryControls() {
       renderBinaryControls();
     });
     binaryStakePresets.appendChild(button);
+  });
+}
+
+function renderBinaryChart() {
+  const chart = binaryState?.chart;
+  const playback = getBinaryPlaybackView();
+  if (!chart || !playback || !Array.isArray(chart.history) || chart.history.length === 0) {
+    binaryChartPath.setAttribute("d", "");
+    binaryChartFuture.setAttribute("d", "");
+    binaryChartProgress.setAttribute("x1", "0");
+    binaryChartProgress.setAttribute("x2", "0");
+    binaryChartPoint.setAttribute("cx", "0");
+    binaryChartPoint.setAttribute("cy", "0");
+    binaryChartNow.textContent = getText("binaryChartPending");
+    binaryChartRange.textContent = getText("binaryChartPending");
+    binaryChartMin.textContent = "--";
+    binaryChartMax.textContent = "--";
+    binaryChartTicks.forEach((tick) => {
+      tick.textContent = "--:--:--";
+    });
+    return;
+  }
+
+  const windowPoints = playback.windowPoints;
+  const minPrice = Math.min(...windowPoints.map((point) => point.price));
+  const maxPrice = Math.max(...windowPoints.map((point) => point.price));
+  const spread = Math.max(maxPrice - minPrice, Number.EPSILON);
+  const points = windowPoints.map((point) => {
+    const x = playback.windowSpan <= 0
+      ? 100
+      : (((point.elapsed - playback.windowStartElapsed) / playback.windowSpan) * 100);
+    const y = 30 - (((point.price - minPrice) / spread) * 24);
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+  const currentPoint = points.length > 0 ? points[points.length - 1].split(",") : ["0", "0"];
+  const progressX = currentPoint[0];
+  const digits = playback.digits;
+
+  binaryChartPath.setAttribute("d", buildPolylinePath(points));
+  binaryChartFuture.setAttribute("d", "");
+  binaryChartProgress.setAttribute("x1", progressX);
+  binaryChartProgress.setAttribute("x2", progressX);
+  binaryChartPoint.setAttribute("cx", currentPoint[0]);
+  binaryChartPoint.setAttribute("cy", currentPoint[1]);
+  binaryChartNow.textContent = template(getText("binaryChartNow"), {
+    price: formatBinaryPrice(playback.price, digits),
+  });
+  binaryChartRange.textContent = template(getText("binaryChartRange"), {
+    min: formatBinaryPrice(minPrice, digits),
+    max: formatBinaryPrice(maxPrice, digits),
+  });
+  binaryChartMin.textContent = formatBinaryPrice(minPrice, digits);
+  binaryChartMax.textContent = formatBinaryPrice(maxPrice, digits);
+  renderBinaryChartTicks(playback.windowStartElapsed, playback.windowEndElapsed);
+}
+
+function buildPolylinePath(points) {
+  if (!points || points.length === 0) {
+    return "";
+  }
+  return `M ${points[0]}${points.slice(1).map((point) => ` L ${point}`).join("")}`;
+}
+
+function getBinaryPlaybackView() {
+  const chart = binaryState?.chart;
+  const caseInfo = binaryState?.caseInfo;
+  if (!chart || !Array.isArray(chart.history) || chart.history.length === 0) {
+    return null;
+  }
+
+  const history = chart.history.map((value) => Number(value));
+  const totalSeconds = Number(chart.totalSeconds) || Math.max(0, history.length - 1);
+  const currentElapsed = Math.max(0, Math.min(Number(chart.elapsedSeconds) || 0, totalSeconds));
+  const previousElapsed =
+    binaryPreviousState?.selectedSymbol === binaryState?.selectedSymbol
+      ? Math.max(0, Math.min(Number(binaryPreviousState?.chart?.elapsedSeconds) || 0, currentElapsed))
+      : currentElapsed;
+  const transitionRange = Math.max(0, currentElapsed - previousElapsed);
+  const transitionProgress = transitionRange > 0
+    ? Math.min(1, Math.max(0, (performance.now() - binaryStateTransitionStartedAt) / 1000))
+    : 1;
+  const elapsedExact = previousElapsed + (transitionRange * transitionProgress);
+  const lowerIndex = Math.min(Math.floor(elapsedExact), history.length - 1);
+  const upperIndex = Math.min(lowerIndex + 1, history.length - 1);
+  const progress = Math.max(0, Math.min(elapsedExact - lowerIndex, 1));
+  const lowerPrice = history[lowerIndex];
+  const upperPrice = history[upperIndex];
+  const currentPrice = lowerPrice + ((upperPrice - lowerPrice) * progress);
+  const visibleBase = history.slice(0, lowerIndex + 1).map((price, index) => ({
+    elapsed: index,
+    price,
+  }));
+  const animatedPoints =
+    upperIndex > lowerIndex
+      ? [...visibleBase, { elapsed: elapsedExact, price: currentPrice }]
+      : visibleBase;
+  const windowEndElapsed = elapsedExact <= BINARY_CHART_WINDOW_SECONDS
+    ? BINARY_CHART_WINDOW_SECONDS
+    : elapsedExact;
+  const windowStartElapsed = Math.max(0, windowEndElapsed - BINARY_CHART_WINDOW_SECONDS);
+  const windowSpan = Math.max(1, windowEndElapsed - windowStartElapsed);
+  const windowPoints = [
+    {
+      elapsed: windowStartElapsed,
+      price: interpolateBinaryPrice(history, windowStartElapsed),
+    },
+  ];
+  animatedPoints.forEach((point) => {
+    if (point.elapsed > windowStartElapsed && point.elapsed <= elapsedExact) {
+      windowPoints.push(point);
+    }
+  });
+  if (windowPoints[windowPoints.length - 1].elapsed < elapsedExact) {
+    windowPoints.push({ elapsed: elapsedExact, price: currentPrice });
+  }
+
+  return {
+    digits: Number(chart.priceDigits) || 3,
+    elapsedExact,
+    price: currentPrice,
+    windowPoints,
+    windowStartElapsed,
+    windowEndElapsed,
+    windowSpan,
+  };
+}
+
+function interpolateBinaryPrice(history, elapsed) {
+  if (!history.length) {
+    return 0;
+  }
+  const boundedElapsed = Math.max(0, Math.min(elapsed, history.length - 1));
+  const lowerIndex = Math.floor(boundedElapsed);
+  const upperIndex = Math.min(lowerIndex + 1, history.length - 1);
+  const progress = Math.max(0, Math.min(boundedElapsed - lowerIndex, 1));
+  const lowerPrice = history[lowerIndex];
+  const upperPrice = history[upperIndex];
+  return lowerPrice + ((upperPrice - lowerPrice) * progress);
+}
+
+function renderBinaryChartTicks(windowStartElapsed, windowEndElapsed) {
+  if (!binaryChartTicks.length) {
+    return;
+  }
+
+  const tickCount = binaryChartTicks.length;
+  binaryChartTicks.forEach((tick, index) => {
+    const ratio = tickCount === 1 ? 1 : index / (tickCount - 1);
+    const elapsed = windowStartElapsed + ((windowEndElapsed - windowStartElapsed) * ratio);
+    tick.textContent = formatElapsedClock(elapsed);
   });
 }
 
@@ -1221,6 +1397,33 @@ function formatYen(value, signed = false) {
   return formatter.format(value || 0);
 }
 
+function formatBinaryPrice(value, digits) {
+  return Number(value || 0).toLocaleString(currentLanguage === "ja" ? "ja-JP" : "en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatBinaryElapsed(value) {
+  const locale = currentLanguage === "ja" ? "ja-JP" : "en-US";
+  const rounded = Math.floor((Number(value) || 0) * 10) / 10;
+  const hasFraction = Math.abs(rounded - Math.round(rounded)) > 0.001;
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: hasFraction ? 1 : 0,
+    maximumFractionDigits: 1,
+  }).format(rounded);
+}
+
+function formatElapsedClock(totalSeconds) {
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
+    return "--:--";
+  }
+  const rounded = Math.max(0, Math.round(totalSeconds));
+  const minutes = Math.floor(rounded / 60);
+  const seconds = rounded % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 function formatTime(epochSeconds) {
   return new Intl.DateTimeFormat(currentLanguage === "ja" ? "ja-JP" : "en-US", {
     hour: "2-digit",
@@ -1274,6 +1477,31 @@ function stopBinaryPolling() {
   if (binaryPollTimer !== null) {
     window.clearInterval(binaryPollTimer);
     binaryPollTimer = null;
+  }
+}
+
+function startBinaryPlaybackLoop() {
+  if (binaryPlaybackFrame !== null) {
+    return;
+  }
+
+  const tick = () => {
+    if (selectedGame !== "binary" || !binaryState || isGameLoading) {
+      binaryPlaybackFrame = null;
+      return;
+    }
+    renderBinarySummary();
+    renderBinaryChart();
+    binaryPlaybackFrame = window.requestAnimationFrame(tick);
+  };
+
+  binaryPlaybackFrame = window.requestAnimationFrame(tick);
+}
+
+function stopBinaryPlaybackLoop() {
+  if (binaryPlaybackFrame !== null) {
+    window.cancelAnimationFrame(binaryPlaybackFrame);
+    binaryPlaybackFrame = null;
   }
 }
 

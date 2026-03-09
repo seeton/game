@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import unittest
 from io import BytesIO
@@ -58,7 +58,7 @@ class AppCoreTests(unittest.TestCase):
         status, _, body = self.run_application("/")
         self.assertTrue(status.startswith("200"))
         self.assertIn(b'./static/styles.css', body)
-        self.assertIn(b'./static/app.js?v=20260309b', body)
+        self.assertIn(b'./static/app.js?v=20260309i', body)
 
     def test_binary_state_returns_json_error_when_case_build_fails(self) -> None:
         with mock.patch("app_core.build_binary_public_state", side_effect=RuntimeError("historical case fetch failed")):
@@ -67,6 +67,13 @@ class AppCoreTests(unittest.TestCase):
         self.assertTrue(status.startswith("502"))
         self.assertEqual(headers["Content-Type"], "application/json; charset=utf-8")
         self.assertIn(b'"error": "historical case fetch failed"', body)
+
+    def test_binary_state_uses_no_store_headers(self) -> None:
+        with mock.patch("app_core.build_binary_public_state", return_value={"balance": 100000}):
+            status, headers, _ = self.run_application("/app.xcg", "action=binary_state&symbol=USD/JPY")
+
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(headers["Cache-Control"], "no-store, no-cache, must-revalidate, max-age=0")
 
 
 if __name__ == "__main__":

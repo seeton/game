@@ -73,12 +73,19 @@ def make_response(start_response, status_code, body, content_type, extra_headers
 
 
 def json_response(start_response, payload, status_code=HTTPStatus.OK, extra_headers=None):
+    headers = [
+        ("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"),
+        ("Pragma", "no-cache"),
+        ("Expires", "0"),
+    ]
+    if extra_headers:
+        headers.extend(extra_headers)
     return make_response(
         start_response,
         int(status_code),
         json_bytes(payload),
         "application/json; charset=utf-8",
-        extra_headers=extra_headers,
+        extra_headers=headers,
     )
 
 

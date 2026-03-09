@@ -39,15 +39,15 @@ class BinarySimulationTests(unittest.TestCase):
         simulation = BinarySimulation()
         quote = quote_for_case(CASE, started_at_epoch=100, now_epoch=100, provider=PROVIDER)
 
-        simulation.place_trade("USD/JPY", "up", 10_000, 60, quote, now_epoch=100)
+        simulation.place_trade("USD/JPY", "up", 10_000, 10, quote, now_epoch=100)
 
-        self.assertEqual(simulation.balance, 990_000)
+        self.assertEqual(simulation.balance, 90_000)
         self.assertEqual(len(simulation.open_positions), 1)
         self.assertEqual(simulation.open_positions[0]["entryPrice"], "150.100")
 
     def test_settle_win_adds_payout(self):
         simulation = BinarySimulation(
-            balance=990_000,
+            balance=90_000,
             open_positions=[
                 {
                     "id": "abc",
@@ -65,10 +65,27 @@ class BinarySimulationTests(unittest.TestCase):
 
         simulation.settle_expired(lambda _symbol: CASE, PROVIDER, now_epoch=120)
 
-        self.assertEqual(simulation.balance, 1_008_500)
+        self.assertEqual(simulation.balance, 108_500)
         self.assertEqual(len(simulation.open_positions), 0)
         self.assertEqual(simulation.history[0]["result"], "won")
         self.assertEqual(simulation.history[0]["exitPrice"], "150.220")
+
+    def test_public_state_includes_chart_and_short_durations(self):
+        simulation = BinarySimulation()
+        quote = quote_for_case(CASE, started_at_epoch=100, now_epoch=102, provider=PROVIDER)
+        state = simulation.to_public_state(
+            "USD/JPY",
+            {"provider": PROVIDER, "cases": {"USD/JPY": CASE}},
+            quote,
+            now_epoch=102,
+        )
+
+        self.assertEqual(state["startingBalance"], 100_000)
+        self.assertEqual(state["defaultDuration"], 10)
+        self.assertEqual(state["durations"], [10, 20, 30])
+        self.assertEqual(state["chart"]["history"], CASE["series"][:3])
+        self.assertEqual(state["chart"]["currentPrice"], "150.220")
+        self.assertEqual(state["chart"]["priceDigits"], 3)
 
 
 if __name__ == "__main__":
