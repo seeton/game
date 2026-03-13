@@ -3,6 +3,7 @@ import mimetypes
 import os
 import posixpath
 import random
+import re
 import sys
 import time
 import uuid
@@ -31,6 +32,13 @@ DEFAULT_DIFFICULTY = "medium"
 MAX_BODY_BYTES = 16_384
 ROOT_STATIC_EXTENSIONS = {".css", ".js", ".svg", ".png", ".ico", ".json", ".webmanifest"}
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
+SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+SECURITY_HEADERS = [
+    ("Content-Security-Policy", "frame-ancestors 'self'"),
+    ("Referrer-Policy", "strict-origin-when-cross-origin"),
+    ("X-Content-Type-Options", "nosniff"),
+    ("X-Frame-Options", "SAMEORIGIN"),
+]
 
 DIFFICULTIES = {
     "easy": {"rows": 9, "cols": 9, "mines": 10},
@@ -66,6 +74,7 @@ def make_response(start_response, status_code, body, content_type, extra_headers
         ("Content-Type", content_type),
         ("Content-Length", str(len(body))),
     ]
+    headers.extend(SECURITY_HEADERS)
     if extra_headers:
         headers.extend(extra_headers)
     start_response(status_line(status_code), headers)
@@ -146,7 +155,13 @@ def parse_cookies(environ):
     return cookies
 
 
+def is_valid_session_id(session_id):
+    return isinstance(session_id, str) and bool(SESSION_ID_PATTERN.match(session_id))
+
+
 def _session_path(directory, session_id):
+    if not is_valid_session_id(session_id):
+        raise ValueError("invalid session id")
     return os.path.join(directory, "%s.json" % session_id)
 
 
@@ -160,7 +175,10 @@ def _save_json(directory, session_id, payload):
 
 
 def _load_json(directory, session_id):
-    path = _session_path(directory, session_id)
+    try:
+        path = _session_path(directory, session_id)
+    except ValueError:
+        return None
     if not os.path.isfile(path):
         return None
     with open(path, "r", encoding="utf-8") as handle:
@@ -235,10 +253,20 @@ def ensure_session_id(environ):
     cleanup_old_sessions()
     cookies = parse_cookies(environ)
     session_id = cookies.get(SESSION_COOKIE)
-    if session_id:
+    if is_valid_session_id(session_id):
         return session_id, []
     session_id = uuid.uuid4().hex
     return session_id, [("Set-Cookie", make_cookie_header(session_id, environ))]
+
+
+def handle_options_request(start_response):
+    return make_response(
+        start_response,
+        HTTPStatus.NO_CONTENT,
+        b"",
+        "text/plain; charset=utf-8",
+        extra_headers=[("Allow", "GET, POST, OPTIONS")],
+    )
 
 
 def ensure_minesweeper_session(environ):
@@ -418,6 +446,10 @@ def application(environ, start_response):
     ensure_runtime_dirs()
     path = environ.get("PATH_INFO", "") or environ.get("SCRIPT_NAME", "") or "/"
     query = parse_qs(environ.get("QUERY_STRING", ""), keep_blank_values=True)
+    method = environ.get("REQUEST_METHOD", "GET").upper()
+
+    if method == "OPTIONS" and (path.startswith("/app.xcg") or path.startswith("/api/")):
+        return handle_options_request(start_response)
 
     if path.startswith("/app.xcg") and query.get("action"):
         return handle_api(environ, start_response)

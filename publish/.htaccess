@@ -13,6 +13,13 @@ RewriteRule ^app\.xcg$ /index.html [R=302,L]
 
 DirectoryIndex index.html app.xcg
 
+<IfModule mod_headers.c>
+  Header always setifempty Content-Security-Policy "frame-ancestors 'self'"
+  Header always setifempty Referrer-Policy "strict-origin-when-cross-origin"
+  Header always setifempty X-Content-Type-Options "nosniff"
+  Header always setifempty X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
 <FilesMatch "^(README\.md|Dockerfile|app\.py|app_core\.py|minesweeper\.py|__init__\.py)$">
   Require all denied
   <IfModule !mod_authz_core.c>

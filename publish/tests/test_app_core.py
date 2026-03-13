@@ -1,4 +1,5 @@
-﻿import os
+import os
+import re
 import sys
 import unittest
 from io import BytesIO
@@ -14,24 +15,22 @@ from app_core import application, make_cookie_header
 
 
 class AppCoreTests(unittest.TestCase):
-    def run_application(self, path: str, query_string: str = ""):
+    def run_application(self, path: str, query_string: str = "", environ_overrides=None):
         captured = {}
+        environ = {
+            "PATH_INFO": path,
+            "REQUEST_METHOD": "GET",
+            "QUERY_STRING": query_string,
+            "wsgi.input": BytesIO(b""),
+        }
+        if environ_overrides:
+            environ.update(environ_overrides)
 
         def start_response(status, headers):
             captured["status"] = status
             captured["headers"] = dict(headers)
 
-        body = b"".join(
-            application(
-                {
-                    "PATH_INFO": path,
-                    "REQUEST_METHOD": "GET",
-                    "QUERY_STRING": query_string,
-                    "wsgi.input": BytesIO(b""),
-                },
-                start_response,
-            )
-        )
+        body = b"".join(application(environ, start_response))
         return captured["status"], captured["headers"], body
 
     def test_cookie_is_secure_on_https(self) -> None:
@@ -57,8 +56,8 @@ class AppCoreTests(unittest.TestCase):
     def test_index_uses_static_asset_paths(self) -> None:
         status, _, body = self.run_application("/")
         self.assertTrue(status.startswith("200"))
-        self.assertIn(b'./static/styles.css', body)
-        self.assertIn(b'./static/app.js?v=20260309n', body)
+        self.assertIn(b"./static/styles.css", body)
+        self.assertIn(b"./static/app.js?v=20260313b", body)
 
     def test_binary_state_returns_json_error_when_case_build_fails(self) -> None:
         with mock.patch("app_core.build_binary_public_state", side_effect=RuntimeError("historical case fetch failed")):
@@ -74,6 +73,38 @@ class AppCoreTests(unittest.TestCase):
 
         self.assertTrue(status.startswith("200"))
         self.assertEqual(headers["Cache-Control"], "no-store, no-cache, must-revalidate, max-age=0")
+
+    def test_security_headers_are_present(self) -> None:
+        status, headers, _ = self.run_application("/styles.css")
+
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(headers["Content-Security-Policy"], "frame-ancestors 'self'")
+        self.assertEqual(headers["Referrer-Policy"], "strict-origin-when-cross-origin")
+        self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(headers["X-Frame-Options"], "SAMEORIGIN")
+
+    def test_invalid_session_cookie_is_rotated(self) -> None:
+        status, headers, _ = self.run_application(
+            "/app.xcg",
+            "action=state",
+            environ_overrides={"HTTP_COOKIE": "signal_sweep_session=../../escape"},
+        )
+
+        self.assertTrue(status.startswith("200"))
+        self.assertIn("Set-Cookie", headers)
+        self.assertRegex(headers["Set-Cookie"], re.compile(r"signal_sweep_session=[0-9a-f]{32}"))
+
+    def test_options_returns_204_without_cookie(self) -> None:
+        status, headers, body = self.run_application(
+            "/app.xcg",
+            "action=state",
+            environ_overrides={"REQUEST_METHOD": "OPTIONS"},
+        )
+
+        self.assertTrue(status.startswith("204"))
+        self.assertEqual(headers["Allow"], "GET, POST, OPTIONS")
+        self.assertNotIn("Set-Cookie", headers)
+        self.assertEqual(body, b"")
 
 
 if __name__ == "__main__":

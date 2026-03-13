@@ -65,8 +65,12 @@
   マインスイーパーのゲームロジック
 - `publish/binary_sim.py`
   バイナリシミュレーションの状態管理とヒストリカルケース生成
+- `scripts/post_to_x.py`
+  GitHub Actions から実行する X 投稿スクリプト
 - `publish/static/index.html`
   `www.seetona.com` 向けホームページ本体
+- `publish/index.html`
+  XREA の広告自動挿入対象に乗せるための物理トップページ。内容は `publish/static/index.html` と同期して扱う
 - `publish/static/app.js`
   Three.js の 3D ロゴ演出、言語切替、ゲーム切替、ゲーム API 呼び出し
 - `publish/static/styles.css`
@@ -123,13 +127,17 @@
   - 日次ケースは `publish/runtime/binary_case_cache/` に保存する
   - バックエンド実装上の現行プロバイダは `Historical Replay` で、`Frankfurter` の履歴データから当日用ケースを作る
 - フロント側では binary 状態を 1 秒ごとにポーリングしている
+- X 自動投稿は XREA ではなく GitHub Actions で実行する前提
+- GitHub Actions の workflow は `.github/workflows/post-to-x.yml`
 
 ## API と配信
 
 - `app.xcg?action=state|new|reveal|flag` がマインスイーパー API
 - `app.xcg?action=binary_state|binary_trade|binary_reset` がバイナリ API
 - `/api/` 配下も `app_core.py` が同じ API に流す
-- `/`, `/index.html`, `/app.xcg`, `/app.py` は `publish/static/index.html` を返す
+- 本番の `/` と `/index.html` は Apache が `publish/index.html` を返す
+- `/app.xcg` は `action` 付きの API エンドポイントとして使い、`action` なし直アクセスは `/index.html` へ戻す
+- ローカル確認用サーバーでは `/`, `/index.html`, `/app.xcg`, `/app.py` を `publish/static/index.html` へ流している
 - ルート直下の `styles.css` と `app.js` も静的配信する
 - `publish/.htaccess` では `setn.shop` と `seetona.com` apex を `https://www.*` へ寄せ、`runtime/` `tests/` `__pycache__/` 直アクセスを遮断している
 
