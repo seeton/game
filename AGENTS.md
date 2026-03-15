@@ -66,7 +66,7 @@
 - `publish/binary_sim.py`
   バイナリシミュレーションの状態管理とヒストリカルケース生成
 - `scripts/post_to_x.py`
-  GitHub Actions から実行する X 投稿スクリプト
+  GitHub Actions から実行する Twikit ベースの X 投稿スクリプト
 - `publish/static/index.html`
   `www.seetona.com` 向けホームページ本体
 - `publish/index.html`
@@ -129,6 +129,7 @@
 - フロント側では binary 状態を 1 秒ごとにポーリングしている
 - X 自動投稿は XREA ではなく GitHub Actions で実行する前提
 - GitHub Actions の workflow は `.github/workflows/post-to-x.yml`
+- X 投稿は公式 API ではなく Twikit ベースで動かす前提
 
 ## API と配信
 

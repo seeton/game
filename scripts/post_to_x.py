@@ -1,33 +1,19 @@
 import argparse
+import asyncio
 import base64
-import hashlib
-import hmac
 import json
 import os
-import time
-import uuid
 from datetime import datetime, timedelta, timezone
-from urllib.error import HTTPError, URLError
-from urllib.parse import quote
-from urllib.request import Request, urlopen
 
 
 JST = timezone(timedelta(hours=9))
-X_POST_URL = "https://api.x.com/2/tweets"
 DEFAULT_TEMPLATE = "SEETONA daily update {date}\n{url}"
 DEFAULT_URL = "https://www.seetona.com/"
-DEFAULT_TIMEOUT_SECONDS = 15
 
-REQUIRED_ENV_VARS = (
-    "X_CONSUMER_KEY",
-    "X_CONSUMER_SECRET",
-    "X_ACCESS_TOKEN",
-    "X_ACCESS_TOKEN_SECRET",
+REQUIRED_LOGIN_ENV_VARS = (
+    "TWIKIT_AUTH_INFO_1",
+    "TWIKIT_PASSWORD",
 )
-
-
-def percent_encode(value):
-    return quote(str(value), safe="~-._")
 
 
 def now_jst(now=None):
@@ -53,100 +39,108 @@ def build_post_text(template=None, url=None, now=None):
     return text
 
 
-def load_credentials():
+def parse_bool(value, default=True):
+    if value is None or value == "":
+        return default
+    text = str(value).strip().lower()
+    if text in ("1", "true", "yes", "on"):
+        return True
+    if text in ("0", "false", "no", "off"):
+        return False
+    return default
+
+
+def load_login_credentials():
     credentials = {}
     missing = []
-    for name in REQUIRED_ENV_VARS:
+    for name in REQUIRED_LOGIN_ENV_VARS:
         value = os.environ.get(name, "").strip()
         if not value:
             missing.append(name)
         credentials[name] = value
     if missing:
         raise ValueError("missing environment variables: %s" % ", ".join(missing))
+
+    credentials["TWIKIT_AUTH_INFO_2"] = os.environ.get("TWIKIT_AUTH_INFO_2", "").strip()
+    credentials["TWIKIT_TOTP_SECRET"] = os.environ.get("TWIKIT_TOTP_SECRET", "").strip()
+    credentials["TWIKIT_LANGUAGE"] = os.environ.get("TWIKIT_LANGUAGE", "en-US").strip() or "en-US"
+    credentials["TWIKIT_ENABLE_UI_METRICS"] = parse_bool(os.environ.get("TWIKIT_ENABLE_UI_METRICS"), True)
     return credentials
 
 
-def build_oauth_header(method, url, consumer_key, consumer_secret, access_token, access_token_secret):
-    oauth_params = {
-        "oauth_consumer_key": consumer_key,
-        "oauth_nonce": uuid.uuid4().hex,
-        "oauth_signature_method": "HMAC-SHA1",
-        "oauth_timestamp": str(int(time.time())),
-        "oauth_token": access_token,
-        "oauth_version": "1.0",
-    }
-    sorted_items = sorted(oauth_params.items(), key=lambda item: (item[0], item[1]))
-    parameter_string = "&".join(
-        "%s=%s" % (percent_encode(key), percent_encode(value))
-        for key, value in sorted_items
-    )
-    signature_base_string = "&".join(
-        [
-            percent_encode(method.upper()),
-            percent_encode(url),
-            percent_encode(parameter_string),
-        ]
-    )
-    signing_key = "%s&%s" % (percent_encode(consumer_secret), percent_encode(access_token_secret))
-    signature = base64.b64encode(
-        hmac.new(
-            signing_key.encode("utf-8"),
-            signature_base_string.encode("utf-8"),
-            hashlib.sha1,
-        ).digest()
-    ).decode("ascii")
-    oauth_params["oauth_signature"] = signature
-    header_items = sorted(oauth_params.items(), key=lambda item: item[0])
-    return "OAuth " + ", ".join(
-        '%s="%s"' % (percent_encode(key), percent_encode(value))
-        for key, value in header_items
-    )
+def load_cookies():
+    raw_json = os.environ.get("TWIKIT_COOKIES_JSON", "").strip()
+    raw_base64 = os.environ.get("TWIKIT_COOKIES_BASE64", "").strip()
+
+    if raw_json:
+        try:
+            payload = json.loads(raw_json)
+        except ValueError as exc:
+            raise ValueError("TWIKIT_COOKIES_JSON is not valid JSON") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("TWIKIT_COOKIES_JSON must decode to an object")
+        return payload
+
+    if raw_base64:
+        try:
+            decoded = base64.b64decode(raw_base64).decode("utf-8")
+            payload = json.loads(decoded)
+        except Exception as exc:
+            raise ValueError("TWIKIT_COOKIES_BASE64 is not valid base64 JSON") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("TWIKIT_COOKIES_BASE64 must decode to an object")
+        return payload
+
+    return None
 
 
-def post_to_x(text, timeout_seconds=DEFAULT_TIMEOUT_SECONDS):
-    credentials = load_credentials()
-    auth_header = build_oauth_header(
-        "POST",
-        X_POST_URL,
-        credentials["X_CONSUMER_KEY"],
-        credentials["X_CONSUMER_SECRET"],
-        credentials["X_ACCESS_TOKEN"],
-        credentials["X_ACCESS_TOKEN_SECRET"],
-    )
-    request_body = json.dumps({"text": text}).encode("utf-8")
-    request = Request(
-        X_POST_URL,
-        data=request_body,
-        headers={
-            "Authorization": auth_header,
-            "Content-Type": "application/json",
-            "User-Agent": "SEETONA-GitHubActions/1.0",
-        },
-        method="POST",
-    )
+def import_twikit_client():
     try:
-        response = urlopen(request, timeout=int(timeout_seconds))
-        payload = json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError("X API error %s: %s" % (exc.code, body))
-    except URLError as exc:
-        raise RuntimeError("X API connection failed: %s" % exc.reason)
+        from twikit import Client
+    except ImportError as exc:
+        raise RuntimeError("twikit is not installed") from exc
+    return Client
 
-    post_data = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(post_data, dict) or not post_data.get("id"):
-        raise RuntimeError("X API response did not include a post id")
+
+async def authenticate_twikit_client(client):
+    cookies = load_cookies()
+    if cookies is not None:
+        client.set_cookies(cookies, clear_cookies=True)
+        return "cookies"
+
+    credentials = load_login_credentials()
+    login_kwargs = {
+        "auth_info_1": credentials["TWIKIT_AUTH_INFO_1"],
+        "password": credentials["TWIKIT_PASSWORD"],
+        "enable_ui_metrics": credentials["TWIKIT_ENABLE_UI_METRICS"],
+    }
+    if credentials["TWIKIT_AUTH_INFO_2"]:
+        login_kwargs["auth_info_2"] = credentials["TWIKIT_AUTH_INFO_2"]
+    if credentials["TWIKIT_TOTP_SECRET"]:
+        login_kwargs["totp_secret"] = credentials["TWIKIT_TOTP_SECRET"]
+    await client.login(**login_kwargs)
+    return "login"
+
+
+async def post_to_x_async(text, client_factory=None):
+    client_class = client_factory or import_twikit_client()
+    language = os.environ.get("TWIKIT_LANGUAGE", "en-US").strip() or "en-US"
+    client = client_class(language=language)
+    auth_mode = await authenticate_twikit_client(client)
+    tweet = await client.create_tweet(text=text)
+    tweet_id = str(getattr(tweet, "id", "") or getattr(tweet, "rest_id", "") or "")
+    tweet_text = str(getattr(tweet, "text", "") or text)
     return {
-        "id": str(post_data["id"]),
-        "text": str(post_data.get("text") or text),
+        "id": tweet_id,
+        "text": tweet_text,
+        "auth_mode": auth_mode,
     }
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="Post daily update to X from GitHub Actions")
+    parser = argparse.ArgumentParser(description="Post daily update to X with Twikit from GitHub Actions")
     parser.add_argument("--text", help="Override post text")
     parser.add_argument("--dry-run", action="store_true", help="Build and print the post text without posting")
-    parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
     return parser.parse_args(argv)
 
 
@@ -162,7 +156,7 @@ def main(argv=None):
         print(text)
         return 0
 
-    result = post_to_x(text, timeout_seconds=args.timeout_seconds)
+    result = asyncio.run(post_to_x_async(text))
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

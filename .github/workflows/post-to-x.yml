@@ -28,12 +28,19 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Twikit
+        run: python -m pip install --upgrade pip twikit
+
       - name: Post to X
         env:
-          X_CONSUMER_KEY: ${{ secrets.X_CONSUMER_KEY }}
-          X_CONSUMER_SECRET: ${{ secrets.X_CONSUMER_SECRET }}
-          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
-          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          TWIKIT_AUTH_INFO_1: ${{ secrets.TWIKIT_AUTH_INFO_1 }}
+          TWIKIT_AUTH_INFO_2: ${{ secrets.TWIKIT_AUTH_INFO_2 }}
+          TWIKIT_PASSWORD: ${{ secrets.TWIKIT_PASSWORD }}
+          TWIKIT_TOTP_SECRET: ${{ secrets.TWIKIT_TOTP_SECRET }}
+          TWIKIT_COOKIES_JSON: ${{ secrets.TWIKIT_COOKIES_JSON }}
+          TWIKIT_COOKIES_BASE64: ${{ secrets.TWIKIT_COOKIES_BASE64 }}
+          TWIKIT_ENABLE_UI_METRICS: ${{ secrets.TWIKIT_ENABLE_UI_METRICS }}
+          TWIKIT_LANGUAGE: ${{ secrets.TWIKIT_LANGUAGE }}
           X_POST_TEMPLATE: ${{ secrets.X_POST_TEMPLATE }}
           SEETONA_URL: ${{ secrets.SEETONA_URL }}
           INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
