@@ -33,18 +33,18 @@ jobs:
 
       - name: Post to X
         env:
-          TWIKIT_AUTH_INFO_1: ${{seetona_com}}
+          TWIKIT_AUTH_INFO_1: ${{ secrets.TWIKIT_AUTH_INFO_1 }}
           TWIKIT_AUTH_INFO_2: ${{ secrets.TWIKIT_AUTH_INFO_2 }}
-          TWIKIT_PASSWORD: ${{ z9xBq7s6BgqEDc! }}
+          TWIKIT_PASSWORD: ${{ secrets.TWIKIT_PASSWORD }}
           TWIKIT_TOTP_SECRET: ${{ secrets.TWIKIT_TOTP_SECRET }}
-          TWIKIT_COOKIES_JSON: ${{ 8adea5ef6b4974fa2020b4a11932eae5afc25e5f }}
-          TWIKIT_COOKIES_BASE64: ${{ 2da4fa39027eb5711ea3cf1c768c2b947f1b90ac4432cc39805fba4380a9b1939911d3f4cbb560a0522689084d35de07be835ffb80efa951e4b7fcc3922b5d46c4be5efe2051ce2d49fc79a2afffd0f2 }}
+          TWIKIT_COOKIES_JSON: ${{ secrets.TWIKIT_COOKIES_JSON }}
+          TWIKIT_COOKIES_BASE64: ${{ secrets.TWIKIT_COOKIES_BASE64 }}
           TWIKIT_ENABLE_UI_METRICS: ${{ secrets.TWIKIT_ENABLE_UI_METRICS }}
           TWIKIT_LANGUAGE: ${{ secrets.TWIKIT_LANGUAGE }}
           X_POST_TEMPLATE: ${{ secrets.X_POST_TEMPLATE }}
           SEETONA_URL: ${{ secrets.SEETONA_URL }}
-          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
-          INPUT_POST_TEXT: ${{ github.event.inputs.post_text }}
+          INPUT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          INPUT_POST_TEXT: ${{ github.event_name == 'workflow_dispatch' && inputs.post_text || '' }}
         run: |
           args=()
           if [ "${INPUT_DRY_RUN}" = "true" ]; then
