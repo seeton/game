@@ -33,6 +33,7 @@ jobs:
           python -m pip install --upgrade twikit
 
       - name: Post to X
+        shell: powershell
         env:
           TWIKIT_AUTH_INFO_1: ${{ secrets.TWIKIT_AUTH_INFO_1 }}
           TWIKIT_AUTH_INFO_2: ${{ secrets.TWIKIT_AUTH_INFO_2 }}
@@ -47,11 +48,12 @@ jobs:
           INPUT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
           INPUT_POST_TEXT: ${{ github.event_name == 'workflow_dispatch' && inputs.post_text || '' }}
         run: |
-          args=()
-          if [ "${INPUT_DRY_RUN}" = "true" ]; then
-            args+=(--dry-run)
-          fi
-          if [ -n "${INPUT_POST_TEXT}" ]; then
-            args+=(--text "${INPUT_POST_TEXT}")
-          fi
-          python scripts/post_to_x.py "${args[@]}"
+          $args = @()
+          if ($env:INPUT_DRY_RUN -eq 'true') {
+            $args += '--dry-run'
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:INPUT_POST_TEXT)) {
+            $args += '--text'
+            $args += $env:INPUT_POST_TEXT
+          }
+          python scripts/post_to_x.py @args
