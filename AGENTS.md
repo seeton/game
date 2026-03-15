@@ -130,6 +130,7 @@
 - X 自動投稿は XREA ではなく GitHub Actions で実行する前提
 - GitHub Actions の workflow は `.github/workflows/post-to-x.yml`
 - X 投稿は公式 API ではなく Twikit ベースで動かす前提
+- `Post To X` workflow は self-hosted runner (`self-hosted`, `windows`, `seetona-x`) で動かす前提
 
 ## API と配信
 
