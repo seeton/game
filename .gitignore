@@ -6,4 +6,5 @@ local/*
 local/ssl/*
 !local/ssl/README.md
 publish/runtime/sessions/*.json
+publish/runtime/binary_sessions/*.json
 publish.zip

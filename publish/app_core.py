@@ -228,6 +228,8 @@ def cleanup_old_sessions():
             try:
                 if not os.path.isfile(path):
                     continue
+                if filename in (".gitkeep", ".htaccess"):
+                    continue
                 age_seconds = now_epoch - int(os.path.getmtime(path))
                 if filename.endswith(".tmp") and age_seconds > TEMP_FILE_MAX_AGE_SECONDS:
                     os.remove(path)
