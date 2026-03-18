@@ -38,10 +38,15 @@ jobs:
           X_POST_TEMPLATE: ${{ secrets.X_POST_TEMPLATE }}
           SEETONA_URL: ${{ secrets.SEETONA_URL }}
           PLAYWRIGHT_CHANNEL: ${{ secrets.PLAYWRIGHT_CHANNEL }}
+          X_BROWSER_PROFILE_DIR: F:\game\local\x-playwright-profile
           INPUT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
           INPUT_POST_TEXT: ${{ github.event_name == 'workflow_dispatch' && inputs.post_text || '' }}
         run: |
           $args = @('post')
+          if (-not [string]::IsNullOrWhiteSpace($env:X_BROWSER_PROFILE_DIR)) {
+            $args += '--profile-dir'
+            $args += $env:X_BROWSER_PROFILE_DIR
+          }
           if ($env:INPUT_DRY_RUN -eq 'true') {
             $args += '--dry-run'
           }
