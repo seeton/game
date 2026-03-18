@@ -1,6 +1,8 @@
 import os
 import re
 import sys
+import tempfile
+import time
 import unittest
 from io import BytesIO
 from unittest import mock
@@ -11,7 +13,7 @@ PUBLISH_ROOT = os.path.dirname(TEST_ROOT)
 if PUBLISH_ROOT not in sys.path:
     sys.path.insert(0, PUBLISH_ROOT)
 
-from app_core import application, make_cookie_header
+from app_core import application, cleanup_old_sessions, load_binary_session, make_cookie_header
 
 
 class AppCoreTests(unittest.TestCase):
@@ -105,6 +107,51 @@ class AppCoreTests(unittest.TestCase):
         self.assertEqual(headers["Allow"], "GET, POST, OPTIONS")
         self.assertNotIn("Set-Cookie", headers)
         self.assertEqual(body, b"")
+
+    def test_cleanup_old_sessions_removes_stale_binary_files(self) -> None:
+        with tempfile.TemporaryDirectory() as runtime_dir:
+            mines_dir = os.path.join(runtime_dir, "sessions")
+            binary_dir = os.path.join(runtime_dir, "binary_sessions")
+            os.makedirs(mines_dir)
+            os.makedirs(binary_dir)
+
+            stale_path = os.path.join(binary_dir, "%s.json" % ("a" * 32))
+            fresh_path = os.path.join(binary_dir, "%s.json" % ("b" * 32))
+            invalid_path = os.path.join(binary_dir, "junk.txt")
+            temp_path = os.path.join(binary_dir, "stale.tmp")
+
+            for path in (stale_path, fresh_path, invalid_path, temp_path):
+                with open(path, "w", encoding="utf-8") as handle:
+                    handle.write("{}")
+
+            now_epoch = time.time()
+            os.utime(stale_path, (now_epoch - (60 * 60 * 7), now_epoch - (60 * 60 * 7)))
+            os.utime(temp_path, (now_epoch - (60 * 20), now_epoch - (60 * 20)))
+
+            with mock.patch("app_core.RUNTIME_DIR", runtime_dir), mock.patch(
+                "app_core.MINESWEEPER_SESSION_DIR", mines_dir
+            ), mock.patch("app_core.BINARY_SESSION_DIR", binary_dir):
+                cleanup_old_sessions()
+
+            self.assertFalse(os.path.exists(stale_path))
+            self.assertFalse(os.path.exists(invalid_path))
+            self.assertFalse(os.path.exists(temp_path))
+            self.assertTrue(os.path.exists(fresh_path))
+
+    def test_corrupt_binary_session_is_deleted_on_load(self) -> None:
+        with tempfile.TemporaryDirectory() as runtime_dir:
+            binary_dir = os.path.join(runtime_dir, "binary_sessions")
+            os.makedirs(binary_dir)
+            session_id = "c" * 32
+            session_path = os.path.join(binary_dir, "%s.json" % session_id)
+            with open(session_path, "w", encoding="utf-8") as handle:
+                handle.write("{not-json")
+
+            with mock.patch("app_core.BINARY_SESSION_DIR", binary_dir):
+                session = load_binary_session(session_id)
+
+            self.assertIsNone(session)
+            self.assertFalse(os.path.exists(session_path))
 
 
 if __name__ == "__main__":

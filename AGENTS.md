@@ -66,7 +66,9 @@
 - `publish/binary_sim.py`
   バイナリシミュレーションの状態管理とヒストリカルケース生成
 - `scripts/post_to_x.py`
-  GitHub Actions から実行する Twikit ベースの X 投稿スクリプト
+  X 投稿文の共通生成と旧 Twikit 経路のスクリプト
+- `scripts/post_to_x_browser.py`
+  ローカル PC の実ブラウザを Playwright で操作して無料で X 投稿するスクリプト
 - `publish/static/index.html`
   `www.seetona.com` 向けホームページ本体
 - `publish/index.html`
@@ -127,10 +129,11 @@
   - 日次ケースは `publish/runtime/binary_case_cache/` に保存する
   - バックエンド実装上の現行プロバイダは `Historical Replay` で、`Frankfurter` の履歴データから当日用ケースを作る
 - フロント側では binary 状態を 1 秒ごとにポーリングしている
-- X 自動投稿は XREA ではなく GitHub Actions で実行する前提
+- `publish/runtime/binary_sessions/` は起動時に古い JSON と壊れた JSON を掃除する
+- X 自動投稿は XREA ではなく外部実行に寄せる
 - GitHub Actions の workflow は `.github/workflows/post-to-x.yml`
-- X 投稿は公式 API ではなく Twikit ベースで動かす前提
-- `Post To X` workflow は self-hosted runner (`self-hosted`, `windows`, `seetona-x`) で動かす前提
+- `Post To X` workflow は self-hosted runner (`self-hosted`, `windows`, `seetona-x`) 上で `scripts/post_to_x_browser.py` を動かす前提
+- 完全無料で安定性を優先する場合は `scripts/post_to_x_browser.py` を Windows タスクスケジューラから直接実行してもよい
 
 ## API と配信
 

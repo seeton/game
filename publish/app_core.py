@@ -2,7 +2,6 @@ import json
 import mimetypes
 import os
 import posixpath
-import random
 import re
 import sys
 import time
@@ -31,8 +30,11 @@ DEFAULT_PORT = 8000
 DEFAULT_DIFFICULTY = "medium"
 MAX_BODY_BYTES = 16_384
 ROOT_STATIC_EXTENSIONS = {".css", ".js", ".svg", ".png", ".ico", ".json", ".webmanifest"}
-SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
+MINESWEEPER_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
+BINARY_SESSION_MAX_AGE_SECONDS = 60 * 60 * 6
+TEMP_FILE_MAX_AGE_SECONDS = 60 * 10
 SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+SESSION_FILE_PATTERN = re.compile(r"^[0-9a-f]{32}\.json$")
 SECURITY_HEADERS = [
     ("Content-Security-Policy", "frame-ancestors 'self'"),
     ("Referrer-Policy", "strict-origin-when-cross-origin"),
@@ -181,8 +183,15 @@ def _load_json(directory, session_id):
         return None
     if not os.path.isfile(path):
         return None
-    with open(path, "r", encoding="utf-8") as handle:
-        return json.load(handle)
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except (OSError, ValueError):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        return None
 
 
 def save_minesweeper_session(session_id, game):
@@ -208,18 +217,25 @@ def load_binary_session(session_id):
 
 
 def cleanup_old_sessions():
-    if random.random() > 0.05:
-        return
-
     ensure_runtime_dirs()
     now_epoch = int(time.time())
-    for directory in (MINESWEEPER_SESSION_DIR, BINARY_SESSION_DIR):
+    for directory, max_age_seconds in (
+        (MINESWEEPER_SESSION_DIR, MINESWEEPER_SESSION_MAX_AGE_SECONDS),
+        (BINARY_SESSION_DIR, BINARY_SESSION_MAX_AGE_SECONDS),
+    ):
         for filename in os.listdir(directory):
-            if not filename.endswith(".json"):
-                continue
             path = os.path.join(directory, filename)
             try:
-                if now_epoch - int(os.path.getmtime(path)) > SESSION_MAX_AGE_SECONDS:
+                if not os.path.isfile(path):
+                    continue
+                age_seconds = now_epoch - int(os.path.getmtime(path))
+                if filename.endswith(".tmp") and age_seconds > TEMP_FILE_MAX_AGE_SECONDS:
+                    os.remove(path)
+                    continue
+                if not SESSION_FILE_PATTERN.match(filename):
+                    os.remove(path)
+                    continue
+                if age_seconds > max_age_seconds:
                     os.remove(path)
             except OSError:
                 continue

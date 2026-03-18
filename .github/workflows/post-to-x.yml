@@ -26,29 +26,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Twikit
+      - name: Install Playwright
         shell: powershell
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --upgrade twikit
+          python -m pip install --upgrade playwright
 
       - name: Post to X
         shell: powershell
         env:
-          TWIKIT_AUTH_INFO_1: ${{ secrets.TWIKIT_AUTH_INFO_1 }}
-          TWIKIT_AUTH_INFO_2: ${{ secrets.TWIKIT_AUTH_INFO_2 }}
-          TWIKIT_PASSWORD: ${{ secrets.TWIKIT_PASSWORD }}
-          TWIKIT_TOTP_SECRET: ${{ secrets.TWIKIT_TOTP_SECRET }}
-          TWIKIT_COOKIES_JSON: ${{ secrets.TWIKIT_COOKIES_JSON }}
-          TWIKIT_COOKIES_BASE64: ${{ secrets.TWIKIT_COOKIES_BASE64 }}
-          TWIKIT_ENABLE_UI_METRICS: ${{ secrets.TWIKIT_ENABLE_UI_METRICS }}
-          TWIKIT_LANGUAGE: ${{ secrets.TWIKIT_LANGUAGE }}
           X_POST_TEMPLATE: ${{ secrets.X_POST_TEMPLATE }}
           SEETONA_URL: ${{ secrets.SEETONA_URL }}
+          PLAYWRIGHT_CHANNEL: ${{ secrets.PLAYWRIGHT_CHANNEL }}
           INPUT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
           INPUT_POST_TEXT: ${{ github.event_name == 'workflow_dispatch' && inputs.post_text || '' }}
         run: |
-          $args = @()
+          $args = @('post')
           if ($env:INPUT_DRY_RUN -eq 'true') {
             $args += '--dry-run'
           }
@@ -56,4 +49,4 @@ jobs:
             $args += '--text'
             $args += $env:INPUT_POST_TEXT
           }
-          python scripts/post_to_x.py @args
+          python scripts/post_to_x_browser.py @args

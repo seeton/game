@@ -623,6 +623,8 @@ let binaryPollTimer = null;
 let binaryPlaybackFrame = null;
 let binaryPreviousState = null;
 let binaryStateTransitionStartedAt = 0;
+let binaryRequestSequence = 0;
+let binaryActionInFlight = false;
 let fishingState = createInitialFishingState();
 
 applyTranslations();
@@ -1283,6 +1285,22 @@ async function requestJson(action, payload = null, extraQuery = {}) {
   return data;
 }
 
+async function requestBinaryJson(action, payload = null, extraQuery = {}) {
+  const requestId = ++binaryRequestSequence;
+  const data = await requestJson(action, payload, {
+    symbol: binarySelectedSymbol,
+    ...extraQuery,
+  });
+  if (requestId !== binaryRequestSequence) {
+    return null;
+  }
+  return data;
+}
+
+function isBinaryBusy() {
+  return isGameLoading || binaryActionInFlight;
+}
+
 async function loadMinesweeper() {
   if (isGameLoading) {
     return;
@@ -1416,7 +1434,7 @@ async function loadBinaryState() {
   renderGameShell();
 
   try {
-    applyBinaryState(await requestJson("binary_state", null, { symbol: binarySelectedSymbol }));
+    applyBinaryState(await requestBinaryJson("binary_state"));
     if (Array.isArray(binaryState.durations) && !binaryState.durations.includes(binarySelectedDuration)) {
       binarySelectedDuration = binaryState.defaultDuration || DEFAULT_BINARY_DURATION;
     }
@@ -1432,7 +1450,7 @@ async function loadBinaryState() {
 }
 
 async function refreshBinaryState() {
-  applyBinaryState(await requestJson("binary_state", null, { symbol: binarySelectedSymbol }));
+  applyBinaryState(await requestBinaryJson("binary_state"));
   renderBinaryPanel();
 }
 
@@ -1441,26 +1459,42 @@ async function placeBinaryTrade(direction) {
     return;
   }
   const stake = getCurrentStake();
-  applyBinaryState(await requestJson("binary_trade", {
-    symbol: binarySelectedSymbol,
-    direction,
-    stake,
-    duration: binarySelectedDuration,
-  }));
-  binaryTransientMessage = "binaryTradePlaced";
+  binaryActionInFlight = true;
   renderBinaryPanel();
+  try {
+    applyBinaryState(await requestBinaryJson("binary_trade", {
+      symbol: binarySelectedSymbol,
+      direction,
+      stake,
+      duration: binarySelectedDuration,
+    }));
+    binaryTransientMessage = "binaryTradePlaced";
+  } finally {
+    binaryActionInFlight = false;
+    renderBinaryPanel();
+  }
 }
 
 async function startBinaryCase() {
   if (selectedGame !== "binary") {
     return;
   }
-  applyBinaryState(await requestJson("binary_start", {}, { symbol: binarySelectedSymbol }));
-  binaryTransientMessage = null;
+  binaryActionInFlight = true;
+  stopBinaryPolling();
   renderBinaryPanel();
+  try {
+    applyBinaryState(await requestBinaryJson("binary_start", {}, { symbol: binarySelectedSymbol }));
+    binaryTransientMessage = null;
+  } finally {
+    binaryActionInFlight = false;
+    renderBinaryPanel();
+  }
 }
 
 function applyBinaryState(nextState) {
+  if (!nextState) {
+    return;
+  }
   const sameSymbol =
     Boolean(binaryState) &&
     Boolean(nextState) &&
@@ -1513,8 +1547,8 @@ function renderBinaryPanel() {
   renderBinaryChart();
 
   const tradingEnabled = Boolean(binaryState.tradingEnabled);
-  binaryUpButton.disabled = isGameLoading || !tradingEnabled;
-  binaryDownButton.disabled = isGameLoading || !tradingEnabled;
+  binaryUpButton.disabled = isBinaryBusy() || !tradingEnabled;
+  binaryDownButton.disabled = isBinaryBusy() || !tradingEnabled;
 
   renderBinaryList(
     binaryOpenList,
@@ -1546,6 +1580,7 @@ function renderBinaryControls() {
   const caseInfo = binaryState?.caseInfo || null;
   const caseStarted = Boolean(caseInfo?.started);
   const caseCompleted = Boolean(caseInfo?.completed);
+  const busy = isBinaryBusy();
 
   binaryPairPicker.replaceChildren();
   symbols.forEach((symbol) => {
@@ -1554,7 +1589,7 @@ function renderBinaryControls() {
     button.textContent = symbol;
     button.classList.toggle("active", symbol === binarySelectedSymbol);
     button.setAttribute("aria-pressed", String(symbol === binarySelectedSymbol));
-    button.disabled = isGameLoading;
+    button.disabled = busy;
     button.addEventListener("click", async () => {
       if (symbol === binarySelectedSymbol) {
         return;
@@ -1584,7 +1619,7 @@ function renderBinaryControls() {
           getText("binaryStartAction")
           || (currentLanguage === "ja" ? "開始" : "Start")
         );
-  binaryStartButton.disabled = isGameLoading || (caseStarted && !caseCompleted);
+  binaryStartButton.disabled = busy || (caseStarted && !caseCompleted);
 
   binaryDurationPicker.replaceChildren();
   durations.forEach((duration) => {
@@ -1593,7 +1628,7 @@ function renderBinaryControls() {
     button.textContent = template(getText("binarySeconds"), { seconds: duration });
     button.classList.toggle("active", duration === binarySelectedDuration);
     button.setAttribute("aria-pressed", String(duration === binarySelectedDuration));
-    button.disabled = isGameLoading;
+    button.disabled = busy;
     button.addEventListener("click", () => {
       binarySelectedDuration = duration;
       renderBinaryControls();
@@ -1602,13 +1637,14 @@ function renderBinaryControls() {
   });
 
   binaryStakePresets.replaceChildren();
+  binaryStakeInput.disabled = busy;
   BINARY_STAKE_PRESETS.forEach((stake) => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = template(getText("binaryStakePreset"), { amount: formatInteger(stake) });
     button.classList.toggle("active", stake === getCurrentStake());
     button.setAttribute("aria-pressed", String(stake === getCurrentStake()));
-    button.disabled = isGameLoading;
+    button.disabled = busy;
     button.addEventListener("click", () => {
       binaryStakeInput.value = String(stake);
       renderBinaryControls();
