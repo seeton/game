@@ -13,6 +13,11 @@ const BINARY_CHART_WINDOW_SECONDS = 30;
 const LANGUAGE_STORAGE_KEY = "seetona-language";
 const BINARY_POLL_MS = 1_000;
 const FISHING_SCAN_MS = 1_400;
+const PLANET_DEFAULT_STATE = Object.freeze({
+  orbitRadiusAu: 1.02,
+  atmosphereLevel: 0.94,
+  rotationSpeed: 1.0,
+});
 
 const FISHING_ZONES = [
   { id: "north-reef", ja: "北の暗礁帯", en: "North reef line" },
@@ -27,7 +32,7 @@ const GAME_LIBRARY = {
   minesweeper: { available: true },
   binary: { available: true },
   fishing: { available: true },
-  planet: { available: false },
+  planet: { available: true },
   management: { available: false },
   solitaire: { available: false },
 };
@@ -101,9 +106,9 @@ const COPY = {
     gameFishingChip: "SONAR ONLY",
     gameFishingTitle: "漁業シミュレーション",
     gameFishingBody: "ソナーで魚群を探し、向かうか別海域を探すかを決める探索ゲームです。",
-    gamePlanetChip: "COMING SOON",
+    gamePlanetChip: "PLAYABLE",
     gamePlanetTitle: "惑星シミュレーション",
-    gamePlanetBody: "重力や軌道を触って遊ぶ枠を先に置いています。",
+    gamePlanetBody: "軌道半径や大気密度を動かして、居住しやすい温度帯を探るミニ実験室です。",
     gameManagementChip: "COMING SOON",
     gameManagementTitle: "経営シミュレーション",
     gameManagementBody: "数字を伸ばしながら店や会社を回す枠です。",
@@ -149,6 +154,39 @@ const COPY = {
     fishingSignalStage3: "中くらいに見える",
     fishingSignalStage4: "多めに見える",
     fishingSignalStage5: "大量に見える",
+    planetYearLabel: "YEAR",
+    planetTempLabel: "TEMP",
+    planetStabilityLabel: "STABILITY",
+    planetControlOrbit: "軌道半径と大気の厚みを動かして、温度帯の変化を見ます。",
+    planetControlClimate: "自転速度を変えると昼夜の長さが変わり、安定度も少し上下します。",
+    planetRandomizeAction: "ランダム生成",
+    planetResetAction: "地球寄りに戻す",
+    planetPanelLabel: "ORBIT LAB",
+    planetPanelTitle: "軌道と気候をその場で調整する",
+    planetPanelCopy: "恒星からの距離、大気の厚み、自転速度を変えながら落ち着く条件を探します。",
+    planetForecastLabel: "FORECAST",
+    planetForecastTitle: "今回の居住予報",
+    planetOrbitControlLabel: "軌道半径",
+    planetAtmosphereControlLabel: "大気密度",
+    planetRotationControlLabel: "自転速度",
+    planetOrbitValue: "{value} AU",
+    planetAtmosphereValue: "{value}%",
+    planetRotationValue: "{value}x",
+    planetYearValue: "{days}日/年",
+    planetTempValue: "{temp}°C",
+    planetStabilityValue: "{value}%",
+    planetForecastStableTitle: "基地を置きやすい温度帯です。",
+    planetForecastStableBody: "極端な暑さや寒さが少なく、長く観測を続けやすい状態です。",
+    planetForecastHotTitle: "恒星に近く、かなり高温です。",
+    planetForecastHotBody: "軌道を少し外側へずらすか、大気を薄くすると落ち着きやすくなります。",
+    planetForecastColdTitle: "外側軌道で冷え込みが強めです。",
+    planetForecastColdBody: "内側へ寄せるか、大気を厚くすると温度帯が戻りやすくなります。",
+    planetForecastThinTitle: "大気が薄く、環境が安定しません。",
+    planetForecastThinBody: "熱が逃げやすいので、少し大気を厚くした方が扱いやすくなります。",
+    planetForecastDenseTitle: "大気が厚く、温室化が強めです。",
+    planetForecastDenseBody: "熱がこもりやすいため、軌道を少し離すと安定度が上がります。",
+    planetForecastWildTitle: "季節変動が大きく、荒れやすい世界です。",
+    planetForecastWildBody: "距離・大気・自転のどれかを中央寄りに戻すと安定しやすくなります。",
     binaryBalanceLabel: "残高",
     binaryQuoteLabel: "現在値",
     binaryProviderLabel: "レート",
@@ -218,10 +256,10 @@ const COPY = {
       },
       planet: {
         panelTitle: "惑星シミュレーション",
-        panelBody: "軌道や速度を触って遊ぶ枠です。いまは棚だけ先に置いています。",
-        promptTitle: "惑星シミュレーションは準備中",
-        promptBody: "重力と軌道の遊び場は次に追加します。",
-        badge: "COMING SOON",
+        panelBody: "軌道半径や大気密度を調整しながら、落ち着く温度帯を探すミニ実験室です。",
+        promptTitle: "惑星シミュレーションを準備中",
+        promptBody: "軌道プレビューを立ち上げています。",
+        badge: "PLAYABLE",
       },
       management: {
         panelTitle: "経営シミュレーション",
@@ -351,9 +389,9 @@ const COPY = {
     gameFishingChip: "SONAR ONLY",
     gameFishingTitle: "Fishing Simulation",
     gameFishingBody: "Sweep with sonar, find a school, then decide whether to head there or search elsewhere.",
-    gamePlanetChip: "COMING SOON",
+    gamePlanetChip: "PLAYABLE",
     gamePlanetTitle: "Planet Simulation",
-    gamePlanetBody: "A future slot for orbit and gravity play.",
+    gamePlanetBody: "A small orbit lab where you tune climate conditions and look for a livable band.",
     gameManagementChip: "COMING SOON",
     gameManagementTitle: "Management Simulation",
     gameManagementBody: "A future slot for building a company through numbers.",
@@ -399,6 +437,39 @@ const COPY = {
     fishingSignalStage3: "Moderate marks",
     fishingSignalStage4: "Heavy marks",
     fishingSignalStage5: "Dense school",
+    planetYearLabel: "YEAR",
+    planetTempLabel: "TEMP",
+    planetStabilityLabel: "STABILITY",
+    planetControlOrbit: "Move the orbit radius and atmosphere thickness to watch the temperature band shift.",
+    planetControlClimate: "Changing rotation speed adjusts day length and nudges overall stability.",
+    planetRandomizeAction: "Randomize",
+    planetResetAction: "Reset to Earth-like",
+    planetPanelLabel: "ORBIT LAB",
+    planetPanelTitle: "Tune orbit and climate in place",
+    planetPanelCopy: "Adjust star distance, atmosphere thickness, and rotation speed to look for a calmer world.",
+    planetForecastLabel: "FORECAST",
+    planetForecastTitle: "Current habitability outlook",
+    planetOrbitControlLabel: "Orbit radius",
+    planetAtmosphereControlLabel: "Atmosphere",
+    planetRotationControlLabel: "Rotation speed",
+    planetOrbitValue: "{value} AU",
+    planetAtmosphereValue: "{value}%",
+    planetRotationValue: "{value}x",
+    planetYearValue: "{days} days/year",
+    planetTempValue: "{temp}°C",
+    planetStabilityValue: "{value}%",
+    planetForecastStableTitle: "This sits near a base-friendly band.",
+    planetForecastStableBody: "The climate stays away from extreme heat and cold, so long observations look manageable.",
+    planetForecastHotTitle: "The orbit is close to the star and runs hot.",
+    planetForecastHotBody: "Shifting outward a little or thinning the atmosphere should calm it down.",
+    planetForecastColdTitle: "The outer orbit leaves the surface fairly cold.",
+    planetForecastColdBody: "Move inward a little or hold more atmosphere to recover a milder range.",
+    planetForecastThinTitle: "The atmosphere is thin and the world swings hard.",
+    planetForecastThinBody: "Heat escapes too easily, so a thicker atmosphere would make it easier to manage.",
+    planetForecastDenseTitle: "The atmosphere is dense and traps too much heat.",
+    planetForecastDenseBody: "Heat builds up quickly, so a slightly wider orbit should improve stability.",
+    planetForecastWildTitle: "Seasonal swings are rough and the planet stays unsettled.",
+    planetForecastWildBody: "Bring one of the controls back toward the middle to make the world more stable.",
     binaryBalanceLabel: "Balance",
     binaryQuoteLabel: "Quote",
     binaryProviderLabel: "Feed",
@@ -468,10 +539,10 @@ const COPY = {
       },
       planet: {
         panelTitle: "Planet Simulation",
-        panelBody: "A future slot for orbit and gravity play. The card is listed first, the game comes later.",
-        promptTitle: "Planet Simulation is coming soon",
-        promptBody: "The gravity playground is reserved but not built yet.",
-        badge: "COMING SOON",
+        panelBody: "A small lab where you tune orbit radius and atmosphere density to find a calmer climate band.",
+        promptTitle: "Loading Planet Simulation",
+        promptBody: "Preparing the orbit preview.",
+        badge: "PLAYABLE",
       },
       management: {
         panelTitle: "Management Simulation",
@@ -550,6 +621,7 @@ const selectedGameBadge = document.getElementById("selected-game-badge");
 const minesToolbar = document.getElementById("mines-toolbar");
 const binaryToolbar = document.getElementById("binary-toolbar");
 const fishingToolbar = document.getElementById("fishing-toolbar");
+const planetToolbar = document.getElementById("planet-toolbar");
 const difficultyCluster = document.getElementById("difficulty-cluster");
 const restartButton = document.getElementById("restart-button");
 
@@ -567,6 +639,7 @@ const clearedElement = document.getElementById("cleared-count");
 
 const binaryPanel = document.getElementById("binary-panel");
 const fishingPanel = document.getElementById("fishing-panel");
+const planetPanel = document.getElementById("planet-panel");
 const binaryBalance = document.getElementById("binary-balance");
 const binaryQuote = document.getElementById("binary-quote");
 const binaryProvider = document.getElementById("binary-provider");
@@ -604,6 +677,24 @@ const fishingTargetTitle = document.getElementById("fishing-target-title");
 const fishingTargetMeta = document.getElementById("fishing-target-meta");
 const fishingSignalScale = document.getElementById("fishing-signal-scale");
 const fishingLogList = document.getElementById("fishing-log-list");
+const planetYear = document.getElementById("planet-year");
+const planetTemp = document.getElementById("planet-temp");
+const planetStability = document.getElementById("planet-stability");
+const planetRandomizeButton = document.getElementById("planet-randomize-button");
+const planetResetButton = document.getElementById("planet-reset-button");
+const planetPanelCopy = document.getElementById("planet-panel-copy");
+const planetForecastTitle = document.getElementById("planet-forecast-title");
+const planetForecastCopy = document.getElementById("planet-forecast-copy");
+const planetOrbitInput = document.getElementById("planet-orbit-input");
+const planetAtmosphereInput = document.getElementById("planet-atmosphere-input");
+const planetRotationInput = document.getElementById("planet-rotation-input");
+const planetOrbitValue = document.getElementById("planet-orbit-value");
+const planetAtmosphereValue = document.getElementById("planet-atmosphere-value");
+const planetRotationValue = document.getElementById("planet-rotation-value");
+const planetStage = document.getElementById("planet-stage");
+const planetOrbit = document.getElementById("planet-orbit");
+const planetWorld = document.getElementById("planet-world");
+const planetAtmosphereGlow = document.getElementById("planet-atmosphere-glow");
 
 const appEndpoint = new URL("./app.xcg", window.location.href);
 
@@ -626,6 +717,7 @@ let binaryStateTransitionStartedAt = 0;
 let binaryRequestSequence = 0;
 let binaryActionInFlight = false;
 let fishingState = createInitialFishingState();
+let planetState = createInitialPlanetState();
 
 applyTranslations();
 syncDifficultyButtons();
@@ -716,6 +808,27 @@ fishingGoButton.addEventListener("click", () => {
 
 fishingSearchButton.addEventListener("click", () => {
   void runFishingScan(true);
+});
+
+planetRandomizeButton.addEventListener("click", () => {
+  planetState = createRandomPlanetState();
+  renderGameShell();
+});
+
+planetResetButton.addEventListener("click", () => {
+  planetState = createInitialPlanetState();
+  renderGameShell();
+});
+
+[planetOrbitInput, planetAtmosphereInput, planetRotationInput].forEach((input) => {
+  input.addEventListener("input", () => {
+    planetState = {
+      orbitRadiusAu: Number(planetOrbitInput.value),
+      atmosphereLevel: Number(planetAtmosphereInput.value),
+      rotationSpeed: Number(planetRotationInput.value),
+    };
+    renderGameShell();
+  });
 });
 
 function loadLanguage() {
@@ -831,6 +944,7 @@ function renderGameShell() {
   const isMinesweeper = selectedGame === "minesweeper";
   const isBinary = selectedGame === "binary";
   const isFishing = selectedGame === "fishing";
+  const isPlanet = selectedGame === "planet";
 
   selectedGameTitle.textContent = gameCopy.panelTitle;
   selectedGameCopy.textContent = gameCopy.panelBody;
@@ -846,6 +960,7 @@ function renderGameShell() {
   minesToolbar.hidden = !isMinesweeper;
   binaryToolbar.hidden = !isBinary;
   fishingToolbar.hidden = !isFishing;
+  planetToolbar.hidden = !isPlanet;
   difficultyCluster.hidden = !isMinesweeper;
   restartButton.hidden = !isMinesweeper;
   restartButton.disabled = isGameLoading || !hasLoadedMinesweeper;
@@ -858,9 +973,22 @@ function renderGameShell() {
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
     fishingPanel.hidden = true;
+    planetPanel.hidden = true;
     gamePlaceholder.hidden = false;
     renderPlaceholder(gameCopy.promptTitle, gameCopy.promptBody);
     renderIdleStats();
+    return;
+  }
+
+  if (isPlanet) {
+    stopBinaryPlaybackLoop();
+    gamePlaceholder.hidden = true;
+    gameLoading.hidden = true;
+    boardWrap.hidden = true;
+    binaryPanel.hidden = true;
+    fishingPanel.hidden = true;
+    planetPanel.hidden = false;
+    renderPlanetPanel();
     return;
   }
 
@@ -871,6 +999,7 @@ function renderGameShell() {
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
     fishingPanel.hidden = false;
+    planetPanel.hidden = true;
     renderFishingPanel();
     return;
   }
@@ -882,6 +1011,7 @@ function renderGameShell() {
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
     fishingPanel.hidden = true;
+    planetPanel.hidden = true;
     renderIdleStats();
     return;
   }
@@ -894,6 +1024,7 @@ function renderGameShell() {
     boardWrap.hidden = false;
     binaryPanel.hidden = true;
     fishingPanel.hidden = true;
+    planetPanel.hidden = true;
     renderMinesweeper();
     return;
   }
@@ -903,6 +1034,7 @@ function renderGameShell() {
     boardWrap.hidden = true;
     binaryPanel.hidden = false;
     fishingPanel.hidden = true;
+    planetPanel.hidden = true;
     renderBinaryPanel();
     return;
   }
@@ -911,6 +1043,7 @@ function renderGameShell() {
   boardWrap.hidden = true;
   binaryPanel.hidden = true;
   fishingPanel.hidden = true;
+  planetPanel.hidden = true;
   stopBinaryPlaybackLoop();
   renderPlaceholder(
     gameCopy.promptTitle,
@@ -953,6 +1086,18 @@ function createInitialFishingState() {
     decision: "standby",
     detection: null,
     log: [],
+  };
+}
+
+function createInitialPlanetState() {
+  return { ...PLANET_DEFAULT_STATE };
+}
+
+function createRandomPlanetState() {
+  return {
+    orbitRadiusAu: Number((0.72 + (Math.random() * 0.78)).toFixed(2)),
+    atmosphereLevel: Number((0.35 + (Math.random() * 1.25)).toFixed(2)),
+    rotationSpeed: Number((0.55 + (Math.random() * 1.25)).toFixed(2)),
   };
 }
 
@@ -1109,6 +1254,111 @@ function renderFishingPanel() {
   renderFishingSignalScale();
   renderFishingSonarBlips();
   renderFishingLog();
+}
+
+function renderPlanetPanel() {
+  const metrics = getPlanetMetrics(planetState);
+
+  planetYear.textContent = template(getText("planetYearValue"), { days: formatInteger(metrics.yearDays) });
+  planetTemp.textContent = template(getText("planetTempValue"), { temp: formatSignedTemperature(metrics.temperatureC) });
+  planetStability.textContent = template(getText("planetStabilityValue"), {
+    value: formatInteger(metrics.stability),
+  });
+
+  planetOrbitInput.value = planetState.orbitRadiusAu.toFixed(2);
+  planetAtmosphereInput.value = planetState.atmosphereLevel.toFixed(2);
+  planetRotationInput.value = planetState.rotationSpeed.toFixed(2);
+  planetOrbitValue.textContent = template(getText("planetOrbitValue"), {
+    value: planetState.orbitRadiusAu.toFixed(2),
+  });
+  planetAtmosphereValue.textContent = template(getText("planetAtmosphereValue"), {
+    value: formatInteger(Math.round(planetState.atmosphereLevel * 100)),
+  });
+  planetRotationValue.textContent = template(getText("planetRotationValue"), {
+    value: planetState.rotationSpeed.toFixed(2),
+  });
+
+  planetPanelCopy.textContent = getText("planetPanelCopy");
+  planetForecastTitle.textContent = getText(metrics.forecastTitleKey);
+  planetForecastCopy.textContent = getText(metrics.forecastBodyKey);
+
+  planetStage.style.setProperty("--planet-orbit-size", `${metrics.orbitSize}%`);
+  planetStage.style.setProperty("--planet-orbit-period", `${metrics.orbitPeriodSeconds}s`);
+  planetStage.style.setProperty("--planet-world-size", `${metrics.worldSize}px`);
+  planetStage.style.setProperty("--planet-glow-opacity", String(metrics.glowOpacity));
+  planetStage.style.setProperty("--planet-star-glow", String(metrics.starGlowOpacity));
+  planetStage.style.setProperty("--planet-primary-hue", String(metrics.primaryHue));
+  planetStage.style.setProperty("--planet-secondary-hue", String(metrics.secondaryHue));
+  planetStage.style.setProperty("--planet-ring-alpha", String(metrics.ringAlpha));
+  planetOrbit.dataset.climate = metrics.climate;
+  planetWorld.dataset.climate = metrics.climate;
+  planetAtmosphereGlow.dataset.climate = metrics.climate;
+}
+
+function getPlanetMetrics(state) {
+  const orbitRadiusAu = clamp(state.orbitRadiusAu, 0.7, 1.6);
+  const atmosphereLevel = clamp(state.atmosphereLevel, 0.2, 1.8);
+  const rotationSpeed = clamp(state.rotationSpeed, 0.5, 2.0);
+  const yearDays = Math.round(365 * Math.pow(orbitRadiusAu, 1.5));
+  const temperatureC = Math.round(
+    16
+      + ((1 / orbitRadiusAu) - 1) * 58
+      + ((atmosphereLevel - 1) * 34)
+      - ((rotationSpeed - 1) * 7),
+  );
+  const stability = clamp(
+    Math.round(
+      100
+      - (Math.abs(temperatureC - 18) * 1.9)
+      - (Math.abs(atmosphereLevel - 1) * 24)
+      - (Math.abs(rotationSpeed - 1) * 18),
+    ),
+    0,
+    100,
+  );
+
+  let climate = "stable";
+  let forecastTitleKey = "planetForecastStableTitle";
+  let forecastBodyKey = "planetForecastStableBody";
+
+  if (stability < 42) {
+    climate = "wild";
+    forecastTitleKey = "planetForecastWildTitle";
+    forecastBodyKey = "planetForecastWildBody";
+  } else if (atmosphereLevel < 0.58) {
+    climate = "thin";
+    forecastTitleKey = "planetForecastThinTitle";
+    forecastBodyKey = "planetForecastThinBody";
+  } else if (atmosphereLevel > 1.34) {
+    climate = "dense";
+    forecastTitleKey = "planetForecastDenseTitle";
+    forecastBodyKey = "planetForecastDenseBody";
+  } else if (temperatureC > 34) {
+    climate = "hot";
+    forecastTitleKey = "planetForecastHotTitle";
+    forecastBodyKey = "planetForecastHotBody";
+  } else if (temperatureC < -8) {
+    climate = "cold";
+    forecastTitleKey = "planetForecastColdTitle";
+    forecastBodyKey = "planetForecastColdBody";
+  }
+
+  return {
+    yearDays,
+    temperatureC,
+    stability,
+    climate,
+    forecastTitleKey,
+    forecastBodyKey,
+    orbitSize: Math.round(42 + ((orbitRadiusAu - 0.7) / 0.9) * 34),
+    orbitPeriodSeconds: (16 + ((yearDays - 305) / 260) * 10).toFixed(2),
+    worldSize: Math.round(42 + (atmosphereLevel * 10)),
+    glowOpacity: (0.24 + (atmosphereLevel * 0.18)).toFixed(2),
+    starGlowOpacity: (0.24 + ((1.4 - Math.min(orbitRadiusAu, 1.4)) * 0.22)).toFixed(2),
+    primaryHue: clamp(Math.round(194 - (temperatureC * 1.8)), 18, 210),
+    secondaryHue: clamp(Math.round(228 - (temperatureC * 1.3) + (atmosphereLevel * 8)), 42, 250),
+    ringAlpha: (0.16 + (stability / 500)).toFixed(2),
+  };
 }
 
 function renderFishingSignalScale() {
@@ -1914,6 +2164,11 @@ function formatDistanceKm(value) {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
+}
+
+function formatSignedTemperature(value) {
+  const rounded = Math.round(Number(value) || 0);
+  return rounded > 0 ? `+${rounded}` : String(rounded);
 }
 
 function formatYen(value, signed = false) {

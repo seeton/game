@@ -21,7 +21,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="./static/styles.css?v=20260313b">
+  <link rel="stylesheet" href="./static/styles.css?v=20260319a">
 </head>
 <body>
   <div class="page-shell">
@@ -288,17 +288,51 @@
             </div>
           </div>
 
+          <div class="game-toolbar" id="planet-toolbar" hidden>
+            <div class="toolbar-row">
+              <div class="game-stats">
+                <div class="metric-card">
+                  <span class="metric-label" data-i18n="planetYearLabel">YEAR</span>
+                  <strong id="planet-year">372日/年</strong>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label" data-i18n="planetTempLabel">TEMP</span>
+                  <strong id="planet-temp">+16°C</strong>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label" data-i18n="planetStabilityLabel">STABILITY</span>
+                  <strong id="planet-stability">84%</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="toolbar-row toolbar-notes">
+              <div class="control-copy">
+                <p data-i18n="planetControlOrbit">軌道半径と大気の厚みを動かして、温度帯の変化を見ます。</p>
+                <p data-i18n="planetControlClimate">自転速度を変えると昼夜の長さが変わり、安定度も少し上下します。</p>
+              </div>
+              <div class="game-actions">
+                <button type="button" id="planet-randomize-button" class="button button-primary" data-i18n="planetRandomizeAction">
+                  ランダム生成
+                </button>
+                <button type="button" id="planet-reset-button" class="button button-ghost" data-i18n="planetResetAction">
+                  地球寄りに戻す
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="game-surface">
             <div class="game-placeholder" id="game-placeholder">
               <div id="game-placeholder-thumb" class="placeholder-thumb"></div>
-              <h3 id="game-placeholder-title">繝槭う繝ｳ繧ｹ繧､繝ｼ繝代・繧定ｪｭ縺ｿ霎ｼ縺ｿ荳ｭ</h3>
-              <p id="game-placeholder-copy">譽壹°繧蛾∈繧薙□繧ｲ繝ｼ繝縺ｮ貅門ｙ繧貞ｧ九ａ縺ｾ縺吶・</p>
+              <h3 id="game-placeholder-title">ゲームを読み込み中</h3>
+              <p id="game-placeholder-copy">選んだゲームの準備を進めています。</p>
             </div>
 
             <div class="game-loading" id="game-loading" hidden>
               <span class="loading-spinner"></span>
-              <strong data-i18n="gameLoading">隱ｭ縺ｿ霎ｼ縺ｿ荳ｭ...</strong>
-              <p data-i18n="gameLoadingDetail">Python 蛛ｴ縺ｮ蜃ｦ逅・′謨ｴ縺・∪縺ｧ蟆代＠蠕・▲縺ｦ縺上□縺輔＞縲・</p>
+              <strong data-i18n="gameLoading">読み込み中...</strong>
+              <p data-i18n="gameLoadingDetail">Python 側の処理が整うまで少し待ってください。</p>
             </div>
 
             <div class="game-board-wrap" id="game-board-wrap" hidden>
@@ -308,7 +342,7 @@
                 aria-live="polite"
                 data-i18n="gameBoardAria"
                 data-i18n-attr="aria-label"
-                aria-label="繝槭う繝ｳ繧ｹ繧､繝ｼ繝代・縺ｮ逶､髱｢"
+                aria-label="マインスイーパーの盤面"
               ></div>
             </div>
 
@@ -471,6 +505,67 @@
                 <ul class="binary-list fishing-log-list" id="fishing-log-list"></ul>
               </article>
             </section>
+
+            <section class="planet-panel" id="planet-panel" hidden>
+              <div class="planet-grid">
+                <article class="fishing-card planet-stage-card">
+                  <div class="binary-card-head">
+                    <span class="panel-label" data-i18n="planetPanelLabel">ORBIT LAB</span>
+                    <h3 data-i18n="planetPanelTitle">軌道と気候をその場で調整する</h3>
+                  </div>
+                  <p class="fishing-panel-copy" id="planet-panel-copy">
+                    恒星からの距離、大気の厚み、自転速度を変えながら落ち着く条件を探します。
+                  </p>
+                  <div class="planet-stage" id="planet-stage" role="img" aria-label="惑星シミュレーションの軌道プレビュー">
+                    <span class="planet-star"></span>
+                    <span class="planet-star-glow"></span>
+                    <span class="planet-orbit-ring"></span>
+                    <div class="planet-orbit" id="planet-orbit">
+                      <span class="planet-atmosphere-glow" id="planet-atmosphere-glow"></span>
+                      <span class="planet-world" id="planet-world"></span>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="fishing-card">
+                  <div class="binary-card-head">
+                    <span class="panel-label" data-i18n="planetForecastLabel">FORECAST</span>
+                    <h3 data-i18n="planetForecastTitle">今回の居住予報</h3>
+                  </div>
+
+                  <div class="planet-control-list">
+                    <label class="planet-control">
+                      <div class="planet-control-head">
+                        <span data-i18n="planetOrbitControlLabel">軌道半径</span>
+                        <strong id="planet-orbit-value">1.02 AU</strong>
+                      </div>
+                      <input type="range" id="planet-orbit-input" min="0.70" max="1.60" step="0.01" value="1.02">
+                    </label>
+
+                    <label class="planet-control">
+                      <div class="planet-control-head">
+                        <span data-i18n="planetAtmosphereControlLabel">大気密度</span>
+                        <strong id="planet-atmosphere-value">94%</strong>
+                      </div>
+                      <input type="range" id="planet-atmosphere-input" min="0.20" max="1.80" step="0.01" value="0.94">
+                    </label>
+
+                    <label class="planet-control">
+                      <div class="planet-control-head">
+                        <span data-i18n="planetRotationControlLabel">自転速度</span>
+                        <strong id="planet-rotation-value">1.00x</strong>
+                      </div>
+                      <input type="range" id="planet-rotation-input" min="0.50" max="2.00" step="0.01" value="1.00">
+                    </label>
+                  </div>
+
+                  <div class="planet-forecast">
+                    <strong id="planet-forecast-title">基地を置きやすい温度帯です。</strong>
+                    <p id="planet-forecast-copy">極端な暑さや寒さが少なく、長く観測を続けやすい状態です。</p>
+                  </div>
+                </article>
+              </div>
+            </section>
           </div>
         </section>
       </section>
@@ -563,9 +658,7 @@
     </footer>
   </div>
 
-  <script type="module" src="./static/app.js?v=20260318a"></script>
+  <script type="module" src="./static/app.js?v=20260319a"></script>
 </body>
 </html>
-
-
 

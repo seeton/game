@@ -850,7 +850,8 @@ main {
 .game-loading,
 .game-board-wrap,
 .binary-panel,
-.fishing-panel {
+.fishing-panel,
+.planet-panel {
   min-height: 296px;
 }
 
@@ -886,7 +887,8 @@ main {
 .game-loading[hidden],
 .game-board-wrap[hidden],
 .binary-panel[hidden],
-.fishing-panel[hidden] {
+.fishing-panel[hidden],
+.planet-panel[hidden] {
   display: none;
 }
 
@@ -986,9 +988,20 @@ main {
   gap: 18px;
 }
 
+.planet-panel {
+  display: grid;
+  gap: 18px;
+}
+
 .fishing-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+  gap: 14px;
+}
+
+.planet-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(320px, 0.84fr);
   gap: 14px;
 }
 
@@ -1012,6 +1025,161 @@ main {
   margin: 16px 0 0;
   color: var(--muted);
   line-height: 1.75;
+}
+
+.planet-stage {
+  --planet-orbit-size: 54%;
+  --planet-orbit-period: 18s;
+  --planet-world-size: 54px;
+  --planet-glow-opacity: 0.32;
+  --planet-star-glow: 0.34;
+  --planet-primary-hue: 184;
+  --planet-secondary-hue: 220;
+  --planet-ring-alpha: 0.22;
+  position: relative;
+  min-height: 340px;
+  margin-top: 18px;
+  border-radius: 26px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 22% 20%, rgba(255, 233, 166, 0.12), transparent 20%),
+    radial-gradient(circle at 74% 72%, rgba(102, 196, 255, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(11, 18, 39, 0.96), rgba(2, 7, 18, 0.98));
+}
+
+.planet-star,
+.planet-star-glow,
+.planet-orbit-ring,
+.planet-orbit,
+.planet-atmosphere-glow,
+.planet-world {
+  position: absolute;
+}
+
+.planet-star,
+.planet-star-glow {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+}
+
+.planet-star {
+  width: 58px;
+  height: 58px;
+  background:
+    radial-gradient(circle at 35% 35%, #fff7de 0%, #ffe39f 32%, #ffb65a 70%, rgba(255, 150, 65, 0.82) 100%);
+  box-shadow: 0 0 34px rgba(255, 188, 112, 0.34);
+}
+
+.planet-star-glow {
+  width: 168px;
+  height: 168px;
+  opacity: var(--planet-star-glow);
+  background: radial-gradient(circle, rgba(255, 189, 100, 0.4), rgba(255, 189, 100, 0));
+}
+
+.planet-orbit-ring {
+  inset: 50% auto auto 50%;
+  width: var(--planet-orbit-size);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 1px solid rgba(154, 184, 226, var(--planet-ring-alpha));
+}
+
+.planet-orbit {
+  left: 50%;
+  top: 50%;
+  width: var(--planet-orbit-size);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  animation: planet-orbit-spin var(--planet-orbit-period) linear infinite;
+}
+
+.planet-world,
+.planet-atmosphere-glow {
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+}
+
+.planet-world {
+  width: var(--planet-world-size);
+  height: var(--planet-world-size);
+  background:
+    radial-gradient(circle at 35% 32%, rgba(255, 255, 255, 0.34), transparent 26%),
+    linear-gradient(135deg,
+      hsl(var(--planet-primary-hue) 58% 56%) 0%,
+      hsl(var(--planet-secondary-hue) 64% 45%) 58%,
+      hsl(var(--planet-primary-hue) 48% 28%) 100%);
+  box-shadow:
+    inset -12px -14px 22px rgba(4, 15, 31, 0.36),
+    0 0 20px rgba(85, 176, 255, 0.14);
+}
+
+.planet-atmosphere-glow {
+  width: calc(var(--planet-world-size) + 20px);
+  height: calc(var(--planet-world-size) + 20px);
+  opacity: var(--planet-glow-opacity);
+  background: radial-gradient(circle, rgba(148, 236, 255, 0.62), rgba(148, 236, 255, 0));
+}
+
+.planet-control-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.planet-control {
+  display: grid;
+  gap: 10px;
+}
+
+.planet-control-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.planet-control-head span {
+  color: var(--muted);
+}
+
+.planet-control-head strong {
+  font-family: "Space Mono", monospace;
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+}
+
+.planet-control input[type="range"] {
+  width: 100%;
+  accent-color: #7ef8dd;
+}
+
+.planet-forecast {
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(126, 248, 221, 0.08), transparent 100%),
+    rgba(255, 255, 255, 0.03);
+}
+
+.planet-forecast strong {
+  display: block;
+  font-size: 1.02rem;
+  letter-spacing: -0.02em;
+}
+
+.planet-forecast p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.72;
 }
 
 .sonar-stage {
@@ -1558,6 +1726,16 @@ main {
   }
 }
 
+@keyframes planet-orbit-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
 @media (max-width: 1180px) {
   .signal-grid {
     grid-template-columns: 1fr;
@@ -1572,7 +1750,8 @@ main {
   .launch-panel,
   .binary-columns,
   .binary-trade-grid,
-  .fishing-grid {
+  .fishing-grid,
+  .planet-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1668,6 +1847,11 @@ main {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .planet-control-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1682,7 +1866,8 @@ main {
   }
 
   .fade-rise,
-  .loading-spinner {
+  .loading-spinner,
+  .planet-orbit {
     animation: none;
   }
 
