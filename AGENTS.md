@@ -131,8 +131,7 @@
 - フロント側では binary 状態を 1 秒ごとにポーリングしている
 - `publish/runtime/binary_sessions/` は起動時に古い JSON と壊れた JSON を掃除する
 - X 自動投稿は XREA ではなく外部実行に寄せる
-- GitHub Actions の workflow は `.github/workflows/post-to-x.yml`
-- `Post To X` workflow は self-hosted runner (`self-hosted`, `windows`, `seetona-x`) 上で `scripts/post_to_x_browser.py` を動かす前提
+- GitHub Actions の毎日 X 投稿 job は削除済み
 - 完全無料で安定性を優先する場合は `scripts/post_to_x_browser.py` を Windows タスクスケジューラから直接実行してもよい
 
 ## API と配信
