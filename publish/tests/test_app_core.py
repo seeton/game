@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import sys
@@ -58,8 +59,19 @@ class AppCoreTests(unittest.TestCase):
     def test_index_uses_static_asset_paths(self) -> None:
         status, _, body = self.run_application("/")
         self.assertTrue(status.startswith("200"))
-        self.assertIn(b"./static/styles.css", body)
-        self.assertIn(b"./static/app.js?v=20260318a", body)
+        self.assertIn(b"/static/styles.css", body)
+        self.assertIn(b"/static/app.js?v=20260503b", body)
+        self.assertIn("遊ぶゲームを選ぶ。".encode("utf-8"), body)
+
+    def test_per_game_paths_serve_index_html(self) -> None:
+        for game in ("minesweeper", "binary", "planet", "management", "fishing", "solitaire"):
+            for suffix in ("", "/"):
+                status, _, body = self.run_application("/" + game + suffix)
+                self.assertTrue(
+                    status.startswith("200"),
+                    msg="expected 200 for /%s%s, got %s" % (game, suffix, status),
+                )
+                self.assertIn(b"/static/app.js", body)
 
     def test_binary_state_returns_json_error_when_case_build_fails(self) -> None:
         with mock.patch("app_core.build_binary_public_state", side_effect=RuntimeError("historical case fetch failed")):
@@ -76,11 +88,52 @@ class AppCoreTests(unittest.TestCase):
         self.assertTrue(status.startswith("200"))
         self.assertEqual(headers["Cache-Control"], "no-store, no-cache, must-revalidate, max-age=0")
 
+    def _new_game(self, difficulty: str):
+        body = ('{"difficulty":"%s"}' % difficulty).encode("utf-8")
+        status, headers, response_body = self.run_application(
+            "/app.xcg",
+            "action=new",
+            environ_overrides={
+                "REQUEST_METHOD": "POST",
+                "CONTENT_LENGTH": str(len(body)),
+                "wsgi.input": BytesIO(body),
+            },
+        )
+        payload = json.loads(response_body.decode("utf-8"))
+        return status, headers, payload
+
+    def test_easy_new_game_uses_5x5_board(self) -> None:
+        status, headers, payload = self._new_game("easy")
+
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertEqual(payload["rows"], 5)
+        self.assertEqual(payload["cols"], 5)
+        self.assertEqual(payload["mines"], 5)
+        self.assertEqual(payload["label"], "easy")
+
+    def test_medium_new_game_uses_7x7_board(self) -> None:
+        status, _, payload = self._new_game("medium")
+
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(payload["rows"], 7)
+        self.assertEqual(payload["cols"], 7)
+        self.assertEqual(payload["label"], "medium")
+
+    def test_hard_new_game_uses_15x15_board(self) -> None:
+        status, _, payload = self._new_game("hard")
+
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(payload["rows"], 15)
+        self.assertEqual(payload["cols"], 15)
+        self.assertEqual(payload["label"], "hard")
+
     def test_security_headers_are_present(self) -> None:
         status, headers, _ = self.run_application("/styles.css")
 
         self.assertTrue(status.startswith("200"))
-        self.assertEqual(headers["Content-Security-Policy"], "frame-ancestors 'self'")
+        self.assertIn("frame-ancestors 'self'", headers["Content-Security-Policy"])
+        self.assertIn("default-src 'self'", headers["Content-Security-Policy"])
         self.assertEqual(headers["Referrer-Policy"], "strict-origin-when-cross-origin")
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(headers["X-Frame-Options"], "SAMEORIGIN")

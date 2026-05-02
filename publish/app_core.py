@@ -35,21 +35,35 @@ BINARY_SESSION_MAX_AGE_SECONDS = 60 * 60 * 6
 TEMP_FILE_MAX_AGE_SECONDS = 60 * 10
 SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 SESSION_FILE_PATTERN = re.compile(r"^[0-9a-f]{32}\.json$")
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' https://cdn.jsdelivr.net "
+    "'sha256-tgYHzF47b8yBol70Z4bTIkDVsojhKxUq+nAFxrsdY/Q='; "
+    "style-src 'self' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "connect-src 'self' https://cdn.jsdelivr.net; "
+    "img-src 'self' data: blob:; "
+    "frame-ancestors 'self'; "
+    "base-uri 'self'; "
+    "form-action 'self'"
+)
 SECURITY_HEADERS = [
-    ("Content-Security-Policy", "frame-ancestors 'self'"),
+    ("Content-Security-Policy", _CSP),
     ("Referrer-Policy", "strict-origin-when-cross-origin"),
     ("X-Content-Type-Options", "nosniff"),
     ("X-Frame-Options", "SAMEORIGIN"),
+    ("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), autoplay=()"),
 ]
 
 DIFFICULTIES = {
-    "easy": {"rows": 9, "cols": 9, "mines": 10},
-    "medium": {"rows": 16, "cols": 16, "mines": 40},
-    "hard": {"rows": 16, "cols": 30, "mines": 99},
+    "easy": {"rows": 5, "cols": 5, "mines": 5},
+    "medium": {"rows": 7, "cols": 7, "mines": 8},
+    "hard": {"rows": 15, "cols": 15, "mines": 40},
 }
 
 MINES_ACTIONS = {"state", "new", "reveal", "flag"}
 BINARY_ACTIONS = {"binary_state", "binary_trade", "binary_reset", "binary_start"}
+GAME_URL_NAMES = {"minesweeper", "binary", "planet", "management", "fishing", "solitaire"}
 
 
 def ensure_runtime_dirs():
@@ -473,6 +487,10 @@ def application(environ, start_response):
         return handle_api(environ, start_response)
 
     if path in ("", "/", "/index.html", "/app.xcg", "/app.py"):
+        return serve_static_file(start_response, "index.html")
+
+    trimmed_path = path.strip("/")
+    if trimmed_path in GAME_URL_NAMES:
         return serve_static_file(start_response, "index.html")
 
     root_asset = path.lstrip("/")

@@ -12,6 +12,29 @@ const BINARY_STAKE_PRESETS = [1_000, 3_000, 5_000, 10_000];
 const BINARY_CHART_WINDOW_SECONDS = 30;
 const LANGUAGE_STORAGE_KEY = "seetona-language";
 const BINARY_POLL_MS = 1_000;
+const BINARY_STARTING_BALANCE = 100_000;
+const BINARY_TARGET_MULTIPLIER = 3;
+const BINARY_DECIDE_MS = 5_000;
+const BINARY_REVEAL_MS = 10_000;
+const BINARY_SETTLED_MS = 1_800;
+const BINARY_PAYOUT_RATE = 0.85;
+const BINARY_MIN_STAKE = 1_000;
+const BINARY_REVEAL_TICKS = 10;
+
+// 10 bundled USD/JPY historical-style price series. Each entry has the entry
+// tick at index 0 followed by 10 one-second reveal ticks (11 prices total).
+const BINARY_SERIES = [
+  { id: "usdjpy-up-1", label: "USD/JPY", digits: 3, prices: [148.20, 148.27, 148.33, 148.36, 148.41, 148.45, 148.48, 148.52, 148.57, 148.61, 148.66] },
+  { id: "usdjpy-down-1", label: "USD/JPY", digits: 3, prices: [149.85, 149.79, 149.74, 149.68, 149.61, 149.55, 149.48, 149.42, 149.37, 149.31, 149.24] },
+  { id: "usdjpy-chop-up", label: "USD/JPY", digits: 3, prices: [150.10, 150.13, 150.09, 150.12, 150.16, 150.11, 150.15, 150.18, 150.14, 150.17, 150.21] },
+  { id: "usdjpy-rev-up", label: "USD/JPY", digits: 3, prices: [151.60, 151.55, 151.49, 151.46, 151.50, 151.55, 151.61, 151.66, 151.71, 151.76, 151.80] },
+  { id: "usdjpy-up-2", label: "USD/JPY", digits: 3, prices: [145.30, 145.36, 145.43, 145.49, 145.54, 145.60, 145.66, 145.71, 145.76, 145.81, 145.85] },
+  { id: "usdjpy-down-2", label: "USD/JPY", digits: 3, prices: [152.40, 152.32, 152.25, 152.17, 152.10, 152.02, 151.95, 151.89, 151.84, 151.80, 151.78] },
+  { id: "usdjpy-chop-down", label: "USD/JPY", digits: 3, prices: [147.55, 147.59, 147.54, 147.56, 147.52, 147.55, 147.50, 147.48, 147.51, 147.47, 147.43] },
+  { id: "usdjpy-up-3", label: "USD/JPY", digits: 3, prices: [149.10, 149.16, 149.21, 149.27, 149.32, 149.37, 149.43, 149.49, 149.54, 149.60, 149.65] },
+  { id: "usdjpy-down-3", label: "USD/JPY", digits: 3, prices: [146.80, 146.74, 146.68, 146.62, 146.56, 146.50, 146.43, 146.37, 146.31, 146.25, 146.20] },
+  { id: "usdjpy-rev-down", label: "USD/JPY", digits: 3, prices: [144.90, 144.95, 145.01, 145.07, 145.12, 145.15, 145.13, 145.10, 145.07, 145.04, 145.00] },
+];
 const FISHING_SCAN_MS = 1_400;
 
 const FISHING_ZONES = [
@@ -27,10 +50,49 @@ const GAME_LIBRARY = {
   minesweeper: { available: true },
   binary: { available: true },
   fishing: { available: true },
-  planet: { available: false },
-  management: { available: false },
-  solitaire: { available: false },
+  planet: { available: true },
+  management: { available: true },
+  solitaire: { available: true },
 };
+
+const GAME_PATHS = {
+  minesweeper: "/minesweeper/",
+  binary: "/binary/",
+  planet: "/planet/",
+  management: "/management/",
+  fishing: "/fishing/",
+  solitaire: "/solitaire/",
+};
+
+function gameFromLocationPath(pathname) {
+  if (typeof pathname !== "string") {
+    return null;
+  }
+  for (const [game, target] of Object.entries(GAME_PATHS)) {
+    const withoutSlash = target.replace(/\/$/, "");
+    if (pathname === target || pathname === withoutSlash) {
+      return game;
+    }
+  }
+  return null;
+}
+
+function pushGameUrl(gameId, replace = false) {
+  const target = GAME_PATHS[gameId];
+  if (!target || typeof window === "undefined" || !window.history) {
+    return;
+  }
+  if (window.location.pathname === target) {
+    return;
+  }
+  const fullTarget = target + window.location.search + window.location.hash;
+  const method = replace ? "replaceState" : "pushState";
+  try {
+    window.history[method]({ game: gameId }, "", fullTarget);
+  } catch {
+    // history API unavailable (e.g. file:// preview) — ignore silently.
+  }
+}
 
 const COPY = {
   ja: {
@@ -101,13 +163,13 @@ const COPY = {
     gameFishingChip: "SONAR ONLY",
     gameFishingTitle: "漁業シミュレーション",
     gameFishingBody: "ソナーで魚群を探し、向かうか別海域を探すかを決める探索ゲームです。",
-    gamePlanetChip: "COMING SOON",
+    gamePlanetChip: "PLAYABLE",
     gamePlanetTitle: "惑星シミュレーション",
     gamePlanetBody: "重力や軌道を触って遊ぶ枠を先に置いています。",
-    gameManagementChip: "COMING SOON",
+    gameManagementChip: "PLAYABLE",
     gameManagementTitle: "経営シミュレーション",
     gameManagementBody: "数字を伸ばしながら店や会社を回す枠です。",
-    gameSolitaireChip: "COMING SOON",
+    gameSolitaireChip: "PLAYABLE",
     gameSolitaireTitle: "ソリティア",
     gameSolitaireBody: "落ち着いて遊べる一人用ゲームの枠です。",
     fishingSweepsLabel: "SWEEPS",
@@ -149,17 +211,69 @@ const COPY = {
     fishingSignalStage3: "中くらいに見える",
     fishingSignalStage4: "多めに見える",
     fishingSignalStage5: "大量に見える",
+    planetBodiesLabel: "天体数",
+    planetStateLabel: "状態",
+    planetControlAdd: "クリックまたはタップで天体を追加。",
+    planetControlNote: "天体同士は引き合い、近づきすぎると合体します。",
+    planetPause: "一時停止",
+    planetResume: "再開",
+    planetReset: "リセット",
+    planetHint: "キャンバスをクリックして天体を追加。最大20個まで。",
+    planetStateRunning: "動作中",
+    planetStatePaused: "一時停止",
+    planetStateEmpty: "空",
+    mgmtDayLabel: "日",
+    mgmtBalanceLabel: "残高",
+    mgmtCustomersLabel: "来客",
+    mgmtControlBuy: "仕入れボタンで在庫を補充する。",
+    mgmtControlServe: "営業開始で当日の客を迎える。",
+    mgmtServeAction: "営業開始",
+    mgmtResetAction: "リセット",
+    mgmtStockLabel: "STOCK",
+    mgmtStockTitle: "在庫補充",
+    mgmtMenuLabel: "MENU",
+    mgmtMenuTitle: "商品一覧",
+    mgmtLogLabel: "LOG",
+    mgmtLogTitle: "営業記録",
+    mgmtLogEmpty: "まだ営業記録はありません。",
+    mgmtBuyButton: "+{count}個 ({cost})",
+    mgmtStockCount: "在庫: {count}個",
+    mgmtSellPrice: "売値: {price}",
+    mgmtLogDay: "{day}日目",
+    mgmtLogServed: "{served}/{customers}人",
+    solitaireMovesLabel: "手数",
+    solitaireTimeLabel: "TIME",
+    solitaireStockLabel: "山札",
+    solitaireControl1: "山札をクリックしてめくる。カードをクリックして選択・移動。",
+    solitaireControl2: "全カードを組み札に積んだらクリア。",
+    solitaireRestart: "新しいゲーム",
+    solitaireWin: "クリア！おめでとうございます。",
     binaryBalanceLabel: "残高",
     binaryQuoteLabel: "現在値",
-    binaryProviderLabel: "レート",
+    binaryProviderLabel: "ラウンド",
     binaryPairLabel: "PAIR",
     binaryDurationLabel: "DURATION",
     binaryStakeLabel: "STAKE",
     binaryStakeCustom: "カスタム金額",
     binaryActionUp: "上がる",
     binaryActionDown: "下がる",
-    binaryStatusDefault: "通貨ペアごとに1日1ケースをチャートで再生します。",
-    binaryProviderDefault: "昨日までの実データから作った疑似リアルタイムケースです。",
+    binaryStatusDefault: "残高3倍でクリア。5秒で売買を選び、10秒かけて答え合わせします。",
+    binaryStatusDeciding: "{seconds}秒以内に上がる / 下がる を選んでください。",
+    binaryStatusRevealing: "答え合わせまで残り{seconds}秒…",
+    binaryStatusSettledWon: "勝ち！ {profit}",
+    binaryStatusSettledLost: "負け…次のラウンドへ。",
+    binaryStatusSettledDraw: "引き分け。掛け金は戻ります。",
+    binaryStatusSkipped: "見送り。次のラウンドへ。",
+    binaryStatusCleared: "残高3倍達成！クリアです。",
+    binaryStatusGameOver: "残高不足でゲームオーバー。",
+    binaryProgressLine: "ラウンド {round} / 目標残高 {target}",
+    binaryMarketNote: "",
+    binaryDecidingTimer: "決断 残り{seconds}秒",
+    binaryRevealingTimer: "判定まで{seconds}秒",
+    binarySettledLabel: "判定中",
+    binaryClearedLabel: "クリア",
+    binaryGameOverLabel: "ゲームオーバー",
+    binaryProviderDefault: "",
     binaryCaseStatus: "{symbol} / 元データ {date} / {elapsed}秒 / {total}秒",
     binaryChartLabel: "CHART",
     binaryChartTitle: "ケースグラフ",
@@ -200,7 +314,7 @@ const COPY = {
         panelBody: "盤面の上に状態と難易度を置き、小さめの盤面をすぐ遊べる形にしています。",
         promptTitle: "マインスイーパーを読み込み中",
         promptBody: "棚から選ぶと同時に盤面の準備を始めます。",
-        badge: "SONAR ONLY",
+        badge: "PLAYABLE",
       },
       binary: {
         panelTitle: "バイナリシミュレーション",
@@ -218,24 +332,24 @@ const COPY = {
       },
       planet: {
         panelTitle: "惑星シミュレーション",
-        panelBody: "軌道や速度を触って遊ぶ枠です。いまは棚だけ先に置いています。",
-        promptTitle: "惑星シミュレーションは準備中",
-        promptBody: "重力と軌道の遊び場は次に追加します。",
-        badge: "COMING SOON",
+        panelBody: "クリックで天体を追加して重力軌道を観察できます。",
+        promptTitle: "惑星シミュレーション",
+        promptBody: "キャンバスをクリックして天体を追加してください。",
+        badge: "PLAYABLE",
       },
       management: {
         panelTitle: "経営シミュレーション",
-        panelBody: "お金と資源を回しながら伸ばしていく枠です。まだ未実装です。",
-        promptTitle: "経営シミュレーションは準備中",
-        promptBody: "数字を積み上げる系の遊び場は次の候補です。",
-        badge: "COMING SOON",
+        panelBody: "材料を仕入れて営業開始し、お店の残高を伸ばしていきます。",
+        promptTitle: "経営シミュレーション",
+        promptBody: "仕入れをして営業開始ボタンを押してください。",
+        badge: "PLAYABLE",
       },
       solitaire: {
         panelTitle: "ソリティア",
-        panelBody: "落ち着いて遊べる一人用ゲーム枠ですが、まだ未実装です。",
-        promptTitle: "ソリティアは準備中",
-        promptBody: "カードを使う穏やかなゲーム枠としてあとで入れます。",
-        badge: "COMING SOON",
+        panelBody: "山札から配って全カードを組み札へ積むクロンダイクです。",
+        promptTitle: "ソリティア",
+        promptBody: "新しいゲームを始めてください。",
+        badge: "PLAYABLE",
       },
     },
     statusLabels: {
@@ -351,13 +465,13 @@ const COPY = {
     gameFishingChip: "SONAR ONLY",
     gameFishingTitle: "Fishing Simulation",
     gameFishingBody: "Sweep with sonar, find a school, then decide whether to head there or search elsewhere.",
-    gamePlanetChip: "COMING SOON",
+    gamePlanetChip: "PLAYABLE",
     gamePlanetTitle: "Planet Simulation",
     gamePlanetBody: "A future slot for orbit and gravity play.",
-    gameManagementChip: "COMING SOON",
+    gameManagementChip: "PLAYABLE",
     gameManagementTitle: "Management Simulation",
     gameManagementBody: "A future slot for building a company through numbers.",
-    gameSolitaireChip: "COMING SOON",
+    gameSolitaireChip: "PLAYABLE",
     gameSolitaireTitle: "Solitaire",
     gameSolitaireBody: "A calm single-player slot that will come later.",
     fishingSweepsLabel: "SWEEPS",
@@ -399,17 +513,69 @@ const COPY = {
     fishingSignalStage3: "Moderate marks",
     fishingSignalStage4: "Heavy marks",
     fishingSignalStage5: "Dense school",
+    planetBodiesLabel: "BODIES",
+    planetStateLabel: "STATE",
+    planetControlAdd: "Click or tap to add a body.",
+    planetControlNote: "Bodies attract each other and merge when they get too close.",
+    planetPause: "Pause",
+    planetResume: "Resume",
+    planetReset: "Clear",
+    planetHint: "Click the canvas to add a body. Up to 20.",
+    planetStateRunning: "Running",
+    planetStatePaused: "Paused",
+    planetStateEmpty: "Empty",
+    mgmtDayLabel: "DAY",
+    mgmtBalanceLabel: "Balance",
+    mgmtCustomersLabel: "Customers",
+    mgmtControlBuy: "Use the stock buttons to restock.",
+    mgmtControlServe: "Press Start Day to serve customers.",
+    mgmtServeAction: "Start Day",
+    mgmtResetAction: "Reset",
+    mgmtStockLabel: "STOCK",
+    mgmtStockTitle: "Restock",
+    mgmtMenuLabel: "MENU",
+    mgmtMenuTitle: "Menu",
+    mgmtLogLabel: "LOG",
+    mgmtLogTitle: "Business log",
+    mgmtLogEmpty: "No log entries yet.",
+    mgmtBuyButton: "+{count} ({cost})",
+    mgmtStockCount: "Stock: {count}",
+    mgmtSellPrice: "Price: {price}",
+    mgmtLogDay: "Day {day}",
+    mgmtLogServed: "{served}/{customers} served",
+    solitaireMovesLabel: "MOVES",
+    solitaireTimeLabel: "TIME",
+    solitaireStockLabel: "STOCK",
+    solitaireControl1: "Click stock to deal. Click a card to select, click destination to move.",
+    solitaireControl2: "Move all cards to the foundations to win.",
+    solitaireRestart: "New game",
+    solitaireWin: "You win! Congratulations.",
     binaryBalanceLabel: "Balance",
     binaryQuoteLabel: "Quote",
-    binaryProviderLabel: "Feed",
+    binaryProviderLabel: "Round",
     binaryPairLabel: "PAIR",
     binaryDurationLabel: "DURATION",
     binaryStakeLabel: "STAKE",
     binaryStakeCustom: "Custom amount",
     binaryActionUp: "Higher",
     binaryActionDown: "Lower",
-    binaryStatusDefault: "Each pair replays one daily case as a chart.",
-    binaryProviderDefault: "This is a pseudo-real-time case built from historical data up to yesterday.",
+    binaryStatusDefault: "Triple your balance to clear. 5s to pick, then a 10s reveal.",
+    binaryStatusDeciding: "Pick UP or DOWN within {seconds}s.",
+    binaryStatusRevealing: "{seconds}s until the reveal…",
+    binaryStatusSettledWon: "Won! {profit}",
+    binaryStatusSettledLost: "Lost. Next round coming.",
+    binaryStatusSettledDraw: "Draw. Your stake is returned.",
+    binaryStatusSkipped: "Skipped. Next round coming.",
+    binaryStatusCleared: "Balance tripled — cleared!",
+    binaryStatusGameOver: "Balance too low. Game over.",
+    binaryProgressLine: "Round {round} / target balance {target}",
+    binaryMarketNote: "",
+    binaryDecidingTimer: "Decide {seconds}s",
+    binaryRevealingTimer: "Reveal {seconds}s",
+    binarySettledLabel: "Settling",
+    binaryClearedLabel: "Cleared",
+    binaryGameOverLabel: "Game over",
+    binaryProviderDefault: "",
     binaryCaseStatus: "{symbol} / source {date} / {elapsed}s / {total}s",
     binaryChartLabel: "CHART",
     binaryChartTitle: "Case chart",
@@ -450,7 +616,7 @@ const COPY = {
         panelBody: "Status and difficulty stay above the board so the board itself can stay compact.",
         promptTitle: "Loading Minesweeper",
         promptBody: "Choosing it from the shelf starts the board request immediately.",
-        badge: "SONAR ONLY",
+        badge: "PLAYABLE",
       },
       binary: {
         panelTitle: "Binary Simulation",
@@ -468,24 +634,24 @@ const COPY = {
       },
       planet: {
         panelTitle: "Planet Simulation",
-        panelBody: "A future slot for orbit and gravity play. The card is listed first, the game comes later.",
-        promptTitle: "Planet Simulation is coming soon",
-        promptBody: "The gravity playground is reserved but not built yet.",
-        badge: "COMING SOON",
+        panelBody: "Click the canvas to add bodies and watch gravity pull them together.",
+        promptTitle: "Planet Simulation",
+        promptBody: "Click the canvas to add a body.",
+        badge: "PLAYABLE",
       },
       management: {
         panelTitle: "Management Simulation",
-        panelBody: "A future slot for growing a company through money and resources.",
-        promptTitle: "Management Simulation is coming soon",
-        promptBody: "The management slot is reserved but not implemented yet.",
-        badge: "COMING SOON",
+        panelBody: "Restock the café and open for business each day.",
+        promptTitle: "Management Simulation",
+        promptBody: "Buy stock then press Start Day.",
+        badge: "PLAYABLE",
       },
       solitaire: {
         panelTitle: "Solitaire",
-        panelBody: "The calm solo slot is reserved but not built yet.",
-        promptTitle: "Solitaire is coming soon",
-        promptBody: "The card-game slot is defined and waiting for implementation.",
-        badge: "COMING SOON",
+        panelBody: "Klondike: deal from stock and move all cards to the foundations.",
+        promptTitle: "Solitaire",
+        promptBody: "Start a new card game.",
+        badge: "PLAYABLE",
       },
     },
     statusLabels: {
@@ -579,7 +745,7 @@ const binaryStakePresets = document.getElementById("binary-stake-presets");
 const binaryStakeInput = document.getElementById("binary-stake-input");
 const binaryUpButton = document.getElementById("binary-up-button");
 const binaryDownButton = document.getElementById("binary-down-button");
-const binaryMarketNote = document.getElementById("binary-market-note");
+const binaryMarketNote = document.getElementById("binary-market-note") || document.createElement("span");
 const binaryChartPath = document.getElementById("binary-chart-path");
 const binaryChartFuture = document.getElementById("binary-chart-future");
 const binaryChartProgress = document.getElementById("binary-chart-progress");
@@ -589,6 +755,8 @@ const binaryChartRange = document.getElementById("binary-chart-range");
 const binaryChartMin = document.getElementById("binary-chart-min");
 const binaryChartMax = document.getElementById("binary-chart-max");
 const binaryChartTicks = Array.from(document.querySelectorAll("[data-binary-chart-tick]"));
+const binaryChartOverlay = document.getElementById("binary-chart-overlay");
+const binaryChartTimer = document.getElementById("binary-chart-timer");
 const binaryOpenList = document.getElementById("binary-open-list");
 const binaryHistoryList = document.getElementById("binary-history-list");
 const fishingSweeps = document.getElementById("fishing-sweeps");
@@ -605,10 +773,39 @@ const fishingTargetMeta = document.getElementById("fishing-target-meta");
 const fishingSignalScale = document.getElementById("fishing-signal-scale");
 const fishingLogList = document.getElementById("fishing-log-list");
 
-const appEndpoint = new URL("./app.xcg", window.location.href);
+const planetToolbar = document.getElementById("planet-toolbar");
+const mgmtToolbar = document.getElementById("mgmt-toolbar");
+const solitaireToolbar = document.getElementById("solitaire-toolbar");
+const planetPanel = document.getElementById("planet-panel");
+const mgmtPanel = document.getElementById("mgmt-panel");
+const solitairePanel = document.getElementById("solitaire-panel");
+const planetBodyCountEl = document.getElementById("planet-body-count");
+const planetStateTextEl = document.getElementById("planet-state-text");
+const planetPauseButton = document.getElementById("planet-pause-button");
+const planetResetButton = document.getElementById("planet-reset-button");
+const planetCanvas = document.getElementById("planet-canvas");
+const mgmtDayEl = document.getElementById("mgmt-day");
+const mgmtBalanceEl = document.getElementById("mgmt-balance");
+const mgmtCustomersEl = document.getElementById("mgmt-customers");
+const mgmtServeButton = document.getElementById("mgmt-serve-button");
+const mgmtResetButton = document.getElementById("mgmt-reset-button");
+const mgmtStockListEl = document.getElementById("mgmt-stock-list");
+const mgmtMenuListEl = document.getElementById("mgmt-menu-list");
+const mgmtLogListEl = document.getElementById("mgmt-log-list");
+const solitaireMovesEl = document.getElementById("solitaire-moves");
+const solitaireTimeEl = document.getElementById("solitaire-time");
+const solitaireStockEl = document.getElementById("solitaire-stock");
+const solitaireRestartButton = document.getElementById("solitaire-restart-button");
+const solitaireStockPileEl = document.getElementById("solitaire-stock-pile");
+const solitaireWastePileEl = document.getElementById("solitaire-waste-pile");
+const solitaireFoundationsEl = document.getElementById("solitaire-foundations");
+const solitaireTableauEl = document.getElementById("solitaire-tableau");
+const solitaireWinMessageEl = document.getElementById("solitaire-win-message");
+
+const appEndpoint = new URL("/app.xcg", window.location.origin);
 
 let currentLanguage = loadLanguage();
-let selectedGame = DEFAULT_GAME;
+let selectedGame = gameFromLocationPath(window.location.pathname) || DEFAULT_GAME;
 let currentDifficulty = DEFAULT_DIFFICULTY;
 let currentState = null;
 let binaryState = null;
@@ -619,13 +816,18 @@ let minesTransientMessage = null;
 let binaryTransientMessage = null;
 let binarySelectedSymbol = DEFAULT_BINARY_SYMBOL;
 let binarySelectedDuration = DEFAULT_BINARY_DURATION;
-let binaryPollTimer = null;
-let binaryPlaybackFrame = null;
-let binaryPreviousState = null;
-let binaryStateTransitionStartedAt = 0;
-let binaryRequestSequence = 0;
-let binaryActionInFlight = false;
+let binaryTickInterval = null;
+let binaryGame = null;
 let fishingState = createInitialFishingState();
+let planetBodies = [];
+let planetRunning = false;
+let planetAnimFrame = null;
+let planetCtx = null;
+let planetResizeFrame = null;
+let planetPausedByUser = false;
+let mgmtState = null;
+let solitaireState = null;
+let solitaireTimerInterval = null;
 
 applyTranslations();
 syncDifficultyButtons();
@@ -643,6 +845,14 @@ gameButtons.forEach((button) => {
   button.addEventListener("click", () => {
     selectGame(button.dataset.gameSelect);
   });
+});
+
+window.addEventListener("popstate", () => {
+  const fromUrl = gameFromLocationPath(window.location.pathname);
+  const target = fromUrl || DEFAULT_GAME;
+  if (target !== selectedGame) {
+    selectGame(target, { skipUrl: true });
+  }
 });
 
 difficultyButtons.forEach((button) => {
@@ -682,25 +892,25 @@ binaryStakeInput.addEventListener("blur", () => {
   renderBinaryControls();
 });
 
-binaryUpButton.addEventListener("click", async () => {
+binaryUpButton.addEventListener("click", () => {
   try {
-    await placeBinaryTrade("up");
+    placeBinaryDecision("up");
   } catch (error) {
     showBinaryError(error);
   }
 });
 
-binaryDownButton.addEventListener("click", async () => {
+binaryDownButton.addEventListener("click", () => {
   try {
-    await placeBinaryTrade("down");
+    placeBinaryDecision("down");
   } catch (error) {
     showBinaryError(error);
   }
 });
 
-binaryStartButton.addEventListener("click", async () => {
+binaryStartButton.addEventListener("click", () => {
   try {
-    await startBinaryCase();
+    restartBinaryGame();
   } catch (error) {
     showBinaryError(error);
   }
@@ -716,6 +926,70 @@ fishingGoButton.addEventListener("click", () => {
 
 fishingSearchButton.addEventListener("click", () => {
   void runFishingScan(true);
+});
+
+planetCanvas.addEventListener("click", (e) => {
+  if (selectedGame !== "planet") return;
+  if (!planetCtx) initPlanetCanvas();
+  if (planetBodies.length >= PLANET_MAX_BODIES) return;
+  const rect = planetCanvas.getBoundingClientRect();
+  const scaleX = planetCanvas.width / rect.width;
+  const scaleY = planetCanvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  planetBodies.push(createPlanetBody(x, y));
+  planetPausedByUser = false;
+  if (!planetRunning) startPlanetLoop();
+  renderPlanetToolbar();
+});
+
+planetPauseButton.addEventListener("click", () => {
+  if (planetRunning) {
+    stopPlanetLoop();
+    planetPausedByUser = true;
+  } else if (planetBodies.length > 0) {
+    planetPausedByUser = false;
+    startPlanetLoop();
+  }
+  renderPlanetToolbar();
+});
+
+planetResetButton.addEventListener("click", () => {
+  stopPlanetLoop();
+  planetBodies = [];
+  planetPausedByUser = false;
+  if (planetCtx) {
+    planetCtx.fillStyle = "rgb(3, 8, 20)";
+    planetCtx.fillRect(0, 0, planetCanvas.width, planetCanvas.height);
+  }
+  renderPlanetToolbar();
+});
+
+mgmtServeButton.addEventListener("click", () => {
+  if (mgmtState) mgmtServeDay();
+});
+
+mgmtResetButton.addEventListener("click", () => {
+  mgmtState = createInitialMgmtState();
+  renderMgmtPanel();
+  renderMgmtToolbar();
+});
+
+solitaireRestartButton.addEventListener("click", () => {
+  newSolitaireGame();
+});
+
+window.addEventListener("resize", () => {
+  if (selectedGame !== "planet") {
+    return;
+  }
+  if (planetResizeFrame) {
+    cancelAnimationFrame(planetResizeFrame);
+  }
+  planetResizeFrame = requestAnimationFrame(() => {
+    planetResizeFrame = null;
+    resizePlanetCanvas();
+  });
 });
 
 function loadLanguage() {
@@ -787,13 +1061,22 @@ function applyTranslations() {
   });
 }
 
-function selectGame(gameId) {
+function selectGame(gameId, options = {}) {
+  if (selectedGame === "planet" && gameId !== "planet") {
+    stopPlanetLoop();
+  }
+  if (selectedGame === "solitaire" && gameId !== "solitaire" && solitaireTimerInterval) {
+    clearInterval(solitaireTimerInterval);
+    solitaireTimerInterval = null;
+  }
   selectedGame = GAME_LIBRARY[gameId] ? gameId : DEFAULT_GAME;
   minesTransientMessage = null;
   binaryTransientMessage = null;
   if (selectedGame !== "binary") {
-    stopBinaryPolling();
-    stopBinaryPlaybackLoop();
+    stopBinaryTick();
+  }
+  if (!options.skipUrl) {
+    pushGameUrl(selectedGame);
   }
   renderGameShell();
   maybeAutoLoadSelectedGame();
@@ -814,13 +1097,9 @@ function maybeAutoLoadSelectedGame() {
     return;
   }
 
-  if (selectedGame === "binary" && hasLoadedBinary && shouldBinaryPollState()) {
-    startBinaryPolling();
+  if (selectedGame === "binary" && hasLoadedBinary) {
+    startBinaryTick();
     return;
-  }
-
-  if (selectedGame === "binary") {
-    stopBinaryPolling();
   }
 }
 
@@ -831,6 +1110,9 @@ function renderGameShell() {
   const isMinesweeper = selectedGame === "minesweeper";
   const isBinary = selectedGame === "binary";
   const isFishing = selectedGame === "fishing";
+  const isPlanet = selectedGame === "planet";
+  const isManagement = selectedGame === "management";
+  const isSolitaire = selectedGame === "solitaire";
 
   selectedGameTitle.textContent = gameCopy.panelTitle;
   selectedGameCopy.textContent = gameCopy.panelBody;
@@ -846,6 +1128,9 @@ function renderGameShell() {
   minesToolbar.hidden = !isMinesweeper;
   binaryToolbar.hidden = !isBinary;
   fishingToolbar.hidden = !isFishing;
+  planetToolbar.hidden = !isPlanet;
+  mgmtToolbar.hidden = !isManagement;
+  solitaireToolbar.hidden = !isSolitaire;
   difficultyCluster.hidden = !isMinesweeper;
   restartButton.hidden = !isMinesweeper;
   restartButton.disabled = isGameLoading || !hasLoadedMinesweeper;
@@ -853,11 +1138,14 @@ function renderGameShell() {
   syncDifficultyButtons();
 
   if (!isPlayable) {
-    stopBinaryPlaybackLoop();
+    stopBinaryTick();
     gameLoading.hidden = true;
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
     fishingPanel.hidden = true;
+    planetPanel.hidden = true;
+    mgmtPanel.hidden = true;
+    solitairePanel.hidden = true;
     gamePlaceholder.hidden = false;
     renderPlaceholder(gameCopy.promptTitle, gameCopy.promptBody);
     renderIdleStats();
@@ -865,23 +1153,91 @@ function renderGameShell() {
   }
 
   if (isFishing) {
-    stopBinaryPlaybackLoop();
+    stopBinaryTick();
     gamePlaceholder.hidden = true;
     gameLoading.hidden = true;
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
     fishingPanel.hidden = false;
+    planetPanel.hidden = true;
+    mgmtPanel.hidden = true;
+    solitairePanel.hidden = true;
     renderFishingPanel();
     return;
   }
 
+  if (isPlanet) {
+    stopBinaryTick();
+    gamePlaceholder.hidden = true;
+    gameLoading.hidden = true;
+    boardWrap.hidden = true;
+    binaryPanel.hidden = true;
+    fishingPanel.hidden = true;
+    planetPanel.hidden = false;
+    mgmtPanel.hidden = true;
+    solitairePanel.hidden = true;
+    requestAnimationFrame(() => {
+      initPlanetCanvas();
+      if (planetBodies.length > 0 && !planetRunning && !planetPausedByUser) {
+        startPlanetLoop();
+      } else if (!planetRunning) {
+        drawPlanets();
+      }
+    });
+    renderPlanetToolbar();
+    return;
+  }
+
+  if (isManagement) {
+    stopBinaryTick();
+    gamePlaceholder.hidden = true;
+    gameLoading.hidden = true;
+    boardWrap.hidden = true;
+    binaryPanel.hidden = true;
+    fishingPanel.hidden = true;
+    planetPanel.hidden = true;
+    mgmtPanel.hidden = false;
+    solitairePanel.hidden = true;
+    if (!mgmtState) {
+      mgmtState = createInitialMgmtState();
+    }
+    renderMgmtPanel();
+    renderMgmtToolbar();
+    return;
+  }
+
+  if (isSolitaire) {
+    stopBinaryTick();
+    gamePlaceholder.hidden = true;
+    gameLoading.hidden = true;
+    boardWrap.hidden = true;
+    binaryPanel.hidden = true;
+    fishingPanel.hidden = true;
+    planetPanel.hidden = true;
+    mgmtPanel.hidden = true;
+    solitairePanel.hidden = false;
+    if (!solitaireState) {
+      newSolitaireGame();
+    } else {
+      renderSolitairePanel();
+      renderSolitaireToolbar();
+      if (!solitaireTimerInterval && !solitaireState.won) {
+        solitaireTimerInterval = setInterval(renderSolitaireToolbar, 1000);
+      }
+    }
+    return;
+  }
+
   if (isGameLoading) {
-    stopBinaryPlaybackLoop();
+    stopBinaryTick();
     gamePlaceholder.hidden = true;
     gameLoading.hidden = false;
     boardWrap.hidden = true;
     binaryPanel.hidden = true;
     fishingPanel.hidden = true;
+    planetPanel.hidden = true;
+    mgmtPanel.hidden = true;
+    solitairePanel.hidden = true;
     renderIdleStats();
     return;
   }
@@ -889,11 +1245,14 @@ function renderGameShell() {
   gameLoading.hidden = true;
 
   if (isMinesweeper && hasLoadedMinesweeper && currentState) {
-    stopBinaryPlaybackLoop();
+    stopBinaryTick();
     gamePlaceholder.hidden = true;
     boardWrap.hidden = false;
     binaryPanel.hidden = true;
     fishingPanel.hidden = true;
+    planetPanel.hidden = true;
+    mgmtPanel.hidden = true;
+    solitairePanel.hidden = true;
     renderMinesweeper();
     return;
   }
@@ -903,6 +1262,9 @@ function renderGameShell() {
     boardWrap.hidden = true;
     binaryPanel.hidden = false;
     fishingPanel.hidden = true;
+    planetPanel.hidden = true;
+    mgmtPanel.hidden = true;
+    solitairePanel.hidden = true;
     renderBinaryPanel();
     return;
   }
@@ -911,7 +1273,10 @@ function renderGameShell() {
   boardWrap.hidden = true;
   binaryPanel.hidden = true;
   fishingPanel.hidden = true;
-  stopBinaryPlaybackLoop();
+  planetPanel.hidden = true;
+  mgmtPanel.hidden = true;
+  solitairePanel.hidden = true;
+  stopBinaryTick();
   renderPlaceholder(
     gameCopy.promptTitle,
     isMinesweeper && minesTransientMessage
@@ -1203,6 +1568,757 @@ function renderFishingLog() {
   });
 }
 
+// ── Planet Simulation ──────────────────────────────────────────────────────
+
+const PLANET_G = 180;
+const PLANET_MAX_BODIES = 20;
+
+function initPlanetCanvas() {
+  if (!planetCtx) {
+    planetCtx = planetCanvas.getContext("2d");
+  }
+  resizePlanetCanvas(true);
+}
+
+function resizePlanetCanvas(force = false) {
+  if (!planetCtx) {
+    return;
+  }
+  const w = Math.max(planetCanvas.offsetWidth, 300);
+  const h = Math.max(planetCanvas.offsetHeight, 300);
+  const prevW = planetCanvas.width || w;
+  const prevH = planetCanvas.height || h;
+  if (!force && prevW === w && prevH === h) {
+    return;
+  }
+  planetCanvas.width = w;
+  planetCanvas.height = h;
+
+  if (planetBodies.length > 0 && prevW > 0 && prevH > 0) {
+    const scaleX = w / prevW;
+    const scaleY = h / prevH;
+    for (const body of planetBodies) {
+      body.x *= scaleX;
+      body.y *= scaleY;
+      body.trail = body.trail.map((point) => ({
+        x: point.x * scaleX,
+        y: point.y * scaleY,
+      }));
+    }
+  }
+
+  planetCtx.fillStyle = "rgb(3, 8, 20)";
+  planetCtx.fillRect(0, 0, w, h);
+  if (!planetRunning) {
+    drawPlanets();
+  }
+}
+
+function createPlanetBody(x, y) {
+  const mass = 3 + Math.random() * 7;
+  const radius = Math.max(4, Math.cbrt(mass) * 2.5);
+  const hue = Math.floor(Math.random() * 360);
+  const cx = (planetCanvas.width || 600) / 2;
+  const cy = (planetCanvas.height || 400) / 2;
+  const dx = x - cx;
+  const dy = y - cy;
+  const speed = 25 + Math.random() * 45;
+  const angle = Math.atan2(dy, dx) + Math.PI / 2 + (Math.random() - 0.5) * 0.8;
+  return {
+    x,
+    y,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    mass,
+    radius,
+    hue,
+    color: `hsl(${hue}, 70%, 65%)`,
+    trailColor: `hsla(${hue}, 70%, 45%, 0.25)`,
+    trail: [],
+  };
+}
+
+function startPlanetLoop() {
+  if (planetAnimFrame) return;
+  planetRunning = true;
+  let lastTime = performance.now();
+
+  function loop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.033);
+    lastTime = now;
+    stepPlanets(dt);
+    drawPlanets();
+    planetAnimFrame = requestAnimationFrame(loop);
+  }
+
+  planetAnimFrame = requestAnimationFrame(loop);
+}
+
+function stopPlanetLoop() {
+  if (planetAnimFrame) {
+    cancelAnimationFrame(planetAnimFrame);
+    planetAnimFrame = null;
+  }
+  planetRunning = false;
+}
+
+function stepPlanets(dt) {
+  const n = planetBodies.length;
+  if (n === 0) return;
+
+  const ax = new Float64Array(n);
+  const ay = new Float64Array(n);
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const dx = planetBodies[j].x - planetBodies[i].x;
+      const dy = planetBodies[j].y - planetBodies[i].y;
+      const r2 = dx * dx + dy * dy;
+      const r = Math.sqrt(r2);
+      if (r < 0.5) continue;
+      const f = PLANET_G / r2;
+      const fx = (f * dx) / r;
+      const fy = (f * dy) / r;
+      ax[i] += fx * planetBodies[j].mass;
+      ay[i] += fy * planetBodies[j].mass;
+      ax[j] -= fx * planetBodies[i].mass;
+      ay[j] -= fy * planetBodies[i].mass;
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    planetBodies[i].vx += ax[i] * dt;
+    planetBodies[i].vy += ay[i] * dt;
+    planetBodies[i].trail.push({ x: planetBodies[i].x, y: planetBodies[i].y });
+    if (planetBodies[i].trail.length > 28) {
+      planetBodies[i].trail.shift();
+    }
+    planetBodies[i].x += planetBodies[i].vx * dt;
+    planetBodies[i].y += planetBodies[i].vy * dt;
+  }
+
+  const merged = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (merged[i]) continue;
+    for (let j = i + 1; j < n; j++) {
+      if (merged[j]) continue;
+      const dx = planetBodies[j].x - planetBodies[i].x;
+      const dy = planetBodies[j].y - planetBodies[i].y;
+      const r = Math.sqrt(dx * dx + dy * dy);
+      if (r < (planetBodies[i].radius + planetBodies[j].radius) * 0.85) {
+        const tm = planetBodies[i].mass + planetBodies[j].mass;
+        planetBodies[i].x =
+          (planetBodies[i].x * planetBodies[i].mass + planetBodies[j].x * planetBodies[j].mass) / tm;
+        planetBodies[i].y =
+          (planetBodies[i].y * planetBodies[i].mass + planetBodies[j].y * planetBodies[j].mass) / tm;
+        planetBodies[i].vx =
+          (planetBodies[i].vx * planetBodies[i].mass + planetBodies[j].vx * planetBodies[j].mass) / tm;
+        planetBodies[i].vy =
+          (planetBodies[i].vy * planetBodies[i].mass + planetBodies[j].vy * planetBodies[j].mass) / tm;
+        planetBodies[i].mass = tm;
+        planetBodies[i].radius = Math.max(4, Math.cbrt(tm) * 2.5);
+        planetBodies[i].trail = [];
+        merged[j] = 1;
+      }
+    }
+  }
+
+  if (merged.some((v) => v)) {
+    planetBodies = planetBodies.filter((_, i) => !merged[i]);
+    renderPlanetToolbar();
+  }
+}
+
+function drawPlanets() {
+  if (!planetCtx) return;
+  const ctx = planetCtx;
+  const w = planetCanvas.width;
+  const h = planetCanvas.height;
+
+  ctx.fillStyle = "rgba(3, 8, 20, 0.22)";
+  ctx.fillRect(0, 0, w, h);
+
+  for (const body of planetBodies) {
+    if (body.trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(body.trail[0].x, body.trail[0].y);
+      for (let i = 1; i < body.trail.length; i++) {
+        ctx.lineTo(body.trail[i].x, body.trail[i].y);
+      }
+      ctx.strokeStyle = body.trailColor;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    const grd = ctx.createRadialGradient(body.x, body.y, 0, body.x, body.y, body.radius * 2.5);
+    grd.addColorStop(0, body.color);
+    grd.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(body.x, body.y, body.radius * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = body.color;
+    ctx.beginPath();
+    ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function renderPlanetToolbar() {
+  planetBodyCountEl.textContent = String(planetBodies.length);
+  if (planetBodies.length === 0) {
+    planetStateTextEl.textContent = getText("planetStateEmpty");
+    planetPauseButton.textContent = getText("planetPause");
+    planetPauseButton.disabled = true;
+  } else {
+    planetPauseButton.disabled = false;
+    if (planetRunning) {
+      planetStateTextEl.textContent = getText("planetStateRunning");
+      planetPauseButton.textContent = getText("planetPause");
+    } else {
+      planetStateTextEl.textContent = getText("planetStatePaused");
+      planetPauseButton.textContent = getText("planetResume");
+    }
+  }
+}
+
+// ── Management Simulation ──────────────────────────────────────────────────
+
+const MGMT_ITEMS = [
+  { id: "coffee", ja: "コーヒー", en: "Coffee", buyCost: 200, sellPrice: 400, batch: 5 },
+  { id: "cake", ja: "ケーキ", en: "Cake", buyCost: 300, sellPrice: 600, batch: 3 },
+];
+
+function createInitialMgmtState() {
+  return {
+    day: 1,
+    balance: 50000,
+    stock: { coffee: 0, cake: 0 },
+    totalCustomers: 0,
+    log: [],
+  };
+}
+
+function mgmtItemName(item) {
+  return currentLanguage === "ja" ? item.ja : item.en;
+}
+
+function mgmtBuyItem(itemId) {
+  const item = MGMT_ITEMS.find((i) => i.id === itemId);
+  if (!item) return;
+  const cost = item.buyCost * item.batch;
+  if (mgmtState.balance < cost) return;
+  mgmtState.balance -= cost;
+  mgmtState.stock[itemId] = (mgmtState.stock[itemId] || 0) + item.batch;
+  renderMgmtPanel();
+  renderMgmtToolbar();
+}
+
+function mgmtServeDay() {
+  const customers = 8 + Math.floor(Math.random() * 15);
+  let revenue = 0;
+  let served = 0;
+  const soldItems = {};
+  MGMT_ITEMS.forEach((i) => (soldItems[i.id] = 0));
+
+  for (let c = 0; c < customers; c++) {
+    const available = MGMT_ITEMS.filter((item) => (mgmtState.stock[item.id] || 0) > 0);
+    if (available.length === 0) break;
+    const chosen = available[Math.floor(Math.random() * available.length)];
+    mgmtState.stock[chosen.id] -= 1;
+    revenue += chosen.sellPrice;
+    soldItems[chosen.id] += 1;
+    served++;
+  }
+
+  mgmtState.balance += revenue;
+  mgmtState.totalCustomers += served;
+
+  mgmtState.log.unshift({
+    day: mgmtState.day,
+    customers,
+    served,
+    revenue,
+    soldItems: { ...soldItems },
+  });
+
+  mgmtState.day++;
+  renderMgmtPanel();
+  renderMgmtToolbar();
+}
+
+function renderMgmtToolbar() {
+  mgmtDayEl.textContent = String(mgmtState.day);
+  mgmtBalanceEl.textContent = formatYen(mgmtState.balance);
+  mgmtCustomersEl.textContent = String(mgmtState.totalCustomers);
+}
+
+function renderMgmtPanel() {
+  mgmtStockListEl.replaceChildren();
+  for (const item of MGMT_ITEMS) {
+    const li = document.createElement("li");
+    li.className = "mgmt-item-row";
+
+    const info = document.createElement("div");
+    info.className = "mgmt-item-info";
+
+    const name = document.createElement("strong");
+    name.textContent = mgmtItemName(item);
+
+    const stockSpan = document.createElement("span");
+    stockSpan.textContent = template(getText("mgmtStockCount"), { count: mgmtState.stock[item.id] || 0 });
+
+    info.append(name, stockSpan);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "button button-ghost mgmt-buy-button";
+    btn.textContent = template(getText("mgmtBuyButton"), {
+      count: item.batch,
+      cost: formatYen(item.buyCost * item.batch),
+    });
+    btn.disabled = mgmtState.balance < item.buyCost * item.batch;
+    const itemId = item.id;
+    btn.addEventListener("click", () => mgmtBuyItem(itemId));
+
+    li.append(info, btn);
+    mgmtStockListEl.appendChild(li);
+  }
+
+  mgmtMenuListEl.replaceChildren();
+  for (const item of MGMT_ITEMS) {
+    const li = document.createElement("li");
+    li.className = "mgmt-item-row";
+
+    const name = document.createElement("strong");
+    name.textContent = mgmtItemName(item);
+
+    const priceSpan = document.createElement("span");
+    priceSpan.textContent = template(getText("mgmtSellPrice"), { price: formatYen(item.sellPrice) });
+
+    li.append(name, priceSpan);
+    mgmtMenuListEl.appendChild(li);
+  }
+
+  mgmtLogListEl.replaceChildren();
+  if (mgmtState.log.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "binary-empty";
+    empty.textContent = getText("mgmtLogEmpty");
+    mgmtLogListEl.appendChild(empty);
+    return;
+  }
+
+  mgmtState.log.slice(0, 10).forEach((entry) => {
+    const li = document.createElement("li");
+    li.className = "mgmt-log-item";
+
+    const top = document.createElement("div");
+    top.className = "mgmt-log-top";
+
+    const dayLabel = document.createElement("strong");
+    dayLabel.textContent = template(getText("mgmtLogDay"), { day: entry.day });
+
+    const revLabel = document.createElement("span");
+    revLabel.className = entry.revenue > 0 ? "mgmt-revenue-pos" : "";
+    revLabel.textContent = formatYen(entry.revenue, true);
+
+    top.append(dayLabel, revLabel);
+
+    const bottom = document.createElement("div");
+    bottom.className = "mgmt-log-bottom";
+    const soldText = MGMT_ITEMS.map((item) => `${mgmtItemName(item)}: ${entry.soldItems[item.id] || 0}`).join(" / ");
+    bottom.textContent = `${template(getText("mgmtLogServed"), {
+      served: entry.served,
+      customers: entry.customers,
+    })} / ${soldText}`;
+
+    li.append(top, bottom);
+    mgmtLogListEl.appendChild(li);
+  });
+}
+
+// ── Solitaire ─────────────────────────────────────────────────────────────
+
+const SOL_SUITS = ["♠", "♥", "♦", "♣"];
+const SOL_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+
+function solIsRed(card) {
+  return card.suit === 1 || card.suit === 2;
+}
+
+function solCanPlaceOnTableau(card, pile) {
+  if (pile.length === 0) return card.rank === 13;
+  const top = pile[pile.length - 1];
+  if (!top.faceUp) return false;
+  return top.rank === card.rank + 1 && solIsRed(card) !== solIsRed(top);
+}
+
+function solCanPlaceOnFoundation(card, foundIdx) {
+  const found = solitaireState.foundations[foundIdx];
+  if (found.length === 0) return card.rank === 1;
+  const top = found[found.length - 1];
+  return top.suit === card.suit && top.rank === card.rank - 1;
+}
+
+function newSolitaireGame() {
+  if (solitaireTimerInterval) {
+    clearInterval(solitaireTimerInterval);
+    solitaireTimerInterval = null;
+  }
+
+  const deck = [];
+  for (let suit = 0; suit < 4; suit++) {
+    for (let rank = 1; rank <= 13; rank++) {
+      deck.push({ suit, rank, faceUp: false });
+    }
+  }
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+
+  const tableau = [];
+  let idx = 0;
+  for (let col = 0; col < 7; col++) {
+    const pile = [];
+    for (let row = 0; row <= col; row++) {
+      pile.push({ ...deck[idx++], faceUp: row === col });
+    }
+    tableau.push(pile);
+  }
+
+  solitaireState = {
+    tableau,
+    foundations: [[], [], [], []],
+    stock: deck.slice(idx).map((c) => ({ ...c, faceUp: false })),
+    waste: [],
+    selected: null,
+    moves: 0,
+    startTime: Date.now(),
+    won: false,
+  };
+
+  solitaireTimerInterval = setInterval(() => {
+    if (solitaireState && !solitaireState.won && selectedGame === "solitaire") {
+      solitaireTimeEl.textContent = solFormatTime(Date.now() - solitaireState.startTime);
+    }
+  }, 1000);
+
+  renderSolitairePanel();
+  renderSolitaireToolbar();
+}
+
+function solFormatTime(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function renderSolitaireToolbar() {
+  if (!solitaireState) return;
+  solitaireMovesEl.textContent = String(solitaireState.moves);
+  solitaireTimeEl.textContent = solFormatTime(Date.now() - solitaireState.startTime);
+  solitaireStockEl.textContent = String(solitaireState.stock.length);
+}
+
+function solRemoveSelection() {
+  const sel = solitaireState.selected;
+  if (!sel) return;
+  if (sel.source === "waste") {
+    solitaireState.waste.pop();
+  } else if (sel.source === "tableau") {
+    solitaireState.tableau[sel.col] = solitaireState.tableau[sel.col].slice(0, sel.startIdx);
+  } else if (sel.source === "foundation") {
+    solitaireState.foundations[sel.col].pop();
+  }
+}
+
+function solFlipTops() {
+  for (const pile of solitaireState.tableau) {
+    if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+      pile[pile.length - 1].faceUp = true;
+    }
+  }
+}
+
+function solCheckWin() {
+  if (solitaireState.foundations.every((f) => f.length === 13)) {
+    solitaireState.won = true;
+    if (solitaireTimerInterval) {
+      clearInterval(solitaireTimerInterval);
+      solitaireTimerInterval = null;
+    }
+    solitaireWinMessageEl.textContent = getText("solitaireWin");
+    solitaireWinMessageEl.hidden = false;
+  }
+}
+
+function solClickStock() {
+  if (solitaireState.won) return;
+  if (solitaireState.stock.length === 0) {
+    solitaireState.stock = solitaireState.waste.reverse().map((c) => ({ ...c, faceUp: false }));
+    solitaireState.waste = [];
+    solitaireState.moves++;
+  } else {
+    const card = solitaireState.stock.pop();
+    card.faceUp = true;
+    solitaireState.waste.push(card);
+    solitaireState.moves++;
+  }
+  solitaireState.selected = null;
+  renderSolitairePanel();
+  renderSolitaireToolbar();
+}
+
+function solClickWaste() {
+  if (solitaireState.won || solitaireState.waste.length === 0) return;
+  const sel = solitaireState.selected;
+  if (sel && sel.source === "waste") {
+    solitaireState.selected = null;
+  } else {
+    solitaireState.selected = {
+      source: "waste",
+      col: null,
+      startIdx: null,
+      cards: [solitaireState.waste[solitaireState.waste.length - 1]],
+    };
+  }
+  renderSolitairePanel();
+}
+
+function solClickFoundation(fi) {
+  if (solitaireState.won) return;
+  const sel = solitaireState.selected;
+  if (sel) {
+    if (sel.cards.length !== 1) {
+      solitaireState.selected = null;
+      renderSolitairePanel();
+      return;
+    }
+    const card = sel.cards[0];
+    const targetFi = [0, 1, 2, 3].find((i) => solCanPlaceOnFoundation(card, i));
+    if (targetFi !== undefined) {
+      solRemoveSelection();
+      solitaireState.foundations[targetFi].push(card);
+      solitaireState.moves++;
+      solitaireState.selected = null;
+      solFlipTops();
+      renderSolitairePanel();
+      renderSolitaireToolbar();
+      solCheckWin();
+    } else {
+      solitaireState.selected = null;
+      renderSolitairePanel();
+    }
+    return;
+  }
+  const found = solitaireState.foundations[fi];
+  if (found.length > 0) {
+    solitaireState.selected = { source: "foundation", col: fi, startIdx: found.length - 1, cards: [found[found.length - 1]] };
+    renderSolitairePanel();
+  }
+}
+
+function solClickTableau(ci, cardIdx) {
+  if (solitaireState.won) return;
+  const pile = solitaireState.tableau[ci];
+  const sel = solitaireState.selected;
+
+  if (pile.length === 0) {
+    if (sel) {
+      if (!solTryMoveToTableau(ci)) {
+        solitaireState.selected = null;
+        renderSolitairePanel();
+      }
+    }
+    return;
+  }
+
+  const card = pile[cardIdx];
+
+  if (!card.faceUp) {
+    if (cardIdx === pile.length - 1) {
+      card.faceUp = true;
+      solitaireState.moves++;
+      solitaireState.selected = null;
+      renderSolitairePanel();
+      renderSolitaireToolbar();
+    }
+    return;
+  }
+
+  if (sel && sel.source === "tableau" && sel.col === ci && sel.startIdx === cardIdx) {
+    solitaireState.selected = null;
+    renderSolitairePanel();
+    return;
+  }
+
+  if (sel) {
+    if (solTryMoveToTableau(ci)) return;
+  }
+
+  const cards = pile.slice(cardIdx);
+  if (!cards.every((c) => c.faceUp)) return;
+  solitaireState.selected = { source: "tableau", col: ci, startIdx: cardIdx, cards };
+  renderSolitairePanel();
+}
+
+function solAutoMoveToFoundation(source, col) {
+  if (!solitaireState || solitaireState.won) return;
+  let card = null;
+  if (source === "waste") {
+    if (solitaireState.waste.length === 0) return;
+    card = solitaireState.waste[solitaireState.waste.length - 1];
+  } else {
+    const pile = solitaireState.tableau[col];
+    if (!pile || pile.length === 0) return;
+    card = pile[pile.length - 1];
+    if (!card.faceUp) return;
+  }
+  const fi = [0, 1, 2, 3].find((i) => solCanPlaceOnFoundation(card, i));
+  if (fi === undefined) return;
+  solitaireState.selected = { source, col, startIdx: source === "waste" ? null : solitaireState.tableau[col].length - 1, cards: [card] };
+  solRemoveSelection();
+  solitaireState.foundations[fi].push(card);
+  solitaireState.moves++;
+  solitaireState.selected = null;
+  solFlipTops();
+  renderSolitairePanel();
+  renderSolitaireToolbar();
+  solCheckWin();
+}
+
+function solTryMoveToTableau(destCol) {
+  const sel = solitaireState.selected;
+  if (!sel) return false;
+  const destPile = solitaireState.tableau[destCol];
+  if (!solCanPlaceOnTableau(sel.cards[0], destPile)) return false;
+  solRemoveSelection();
+  for (const card of sel.cards) {
+    solitaireState.tableau[destCol].push(card);
+  }
+  solitaireState.moves++;
+  solitaireState.selected = null;
+  solFlipTops();
+  renderSolitairePanel();
+  renderSolitaireToolbar();
+  return true;
+}
+
+function makeSolCard(card, isSelected) {
+  const el = document.createElement("div");
+  el.className = `sol-card${solIsRed(card) ? " sol-red" : " sol-black"}${isSelected ? " sol-selected" : ""}`;
+  if (!card.faceUp) {
+    el.classList.add("sol-face-down");
+  } else {
+    const rankEl = document.createElement("span");
+    rankEl.className = "sol-rank";
+    rankEl.textContent = SOL_RANKS[card.rank - 1];
+    const suitEl = document.createElement("span");
+    suitEl.className = "sol-suit";
+    suitEl.textContent = SOL_SUITS[card.suit];
+    el.append(rankEl, suitEl);
+  }
+  return el;
+}
+
+function makeSolEmpty(label) {
+  const el = document.createElement("div");
+  el.className = "sol-card sol-empty";
+  if (label) {
+    const span = document.createElement("span");
+    span.textContent = label;
+    el.appendChild(span);
+  }
+  return el;
+}
+
+function renderSolitairePanel() {
+  if (!solitaireState) return;
+  const sel = solitaireState.selected;
+
+  solitaireStockPileEl.replaceChildren();
+  if (solitaireState.stock.length === 0) {
+    const el = makeSolEmpty("↺");
+    el.style.cursor = "pointer";
+    el.addEventListener("click", solClickStock);
+    solitaireStockPileEl.appendChild(el);
+  } else {
+    const el = document.createElement("div");
+    el.className = "sol-card sol-face-down";
+    el.style.cursor = "pointer";
+    el.addEventListener("click", solClickStock);
+    solitaireStockPileEl.appendChild(el);
+  }
+
+  solitaireWastePileEl.replaceChildren();
+  if (solitaireState.waste.length === 0) {
+    solitaireWastePileEl.appendChild(makeSolEmpty(""));
+  } else {
+    const topCard = solitaireState.waste[solitaireState.waste.length - 1];
+    const isSelected = sel && sel.source === "waste";
+    const el = makeSolCard(topCard, isSelected);
+    el.addEventListener("click", solClickWaste);
+    el.addEventListener("dblclick", () => {
+      solitaireState.selected = null;
+      solAutoMoveToFoundation("waste", null);
+    });
+    solitaireWastePileEl.appendChild(el);
+  }
+
+  solitaireFoundationsEl.replaceChildren();
+  for (let fi = 0; fi < 4; fi++) {
+    const found = solitaireState.foundations[fi];
+    const isSelected = sel && sel.source === "foundation" && sel.col === fi;
+    const el = found.length === 0 ? makeSolEmpty(SOL_SUITS[fi]) : makeSolCard(found[found.length - 1], isSelected);
+    const foundIdx = fi;
+    el.style.cursor = "pointer";
+    el.addEventListener("click", () => solClickFoundation(foundIdx));
+    solitaireFoundationsEl.appendChild(el);
+  }
+
+  solitaireTableauEl.replaceChildren();
+  for (let ci = 0; ci < 7; ci++) {
+    const pile = solitaireState.tableau[ci];
+    const colEl = document.createElement("div");
+    colEl.className = "sol-col";
+    const colIdx = ci;
+
+    if (pile.length === 0) {
+      const empty = makeSolEmpty("");
+      empty.addEventListener("click", () => solClickTableau(colIdx, 0));
+      colEl.appendChild(empty);
+    } else {
+      pile.forEach((card, cardIdx) => {
+        const isCardSelected = sel && sel.source === "tableau" && sel.col === colIdx && cardIdx >= sel.startIdx;
+        const el = makeSolCard(card, isCardSelected);
+        if (cardIdx > 0) {
+          const cs = getComputedStyle(document.documentElement);
+          el.style.marginTop = card.faceUp
+            ? cs.getPropertyValue("--sol-overlap-up").trim()
+            : cs.getPropertyValue("--sol-overlap-down").trim();
+        }
+        const idx = cardIdx;
+        el.addEventListener("click", () => solClickTableau(colIdx, idx));
+        el.addEventListener("dblclick", () => {
+          if (card.faceUp && idx === pile.length - 1) {
+            solitaireState.selected = null;
+            solAutoMoveToFoundation("tableau", colIdx);
+          }
+        });
+        colEl.appendChild(el);
+      });
+    }
+    solitaireTableauEl.appendChild(colEl);
+  }
+
+  solitaireWinMessageEl.hidden = !solitaireState.won;
+  if (solitaireState.won) {
+    solitaireWinMessageEl.textContent = getText("solitaireWin");
+  }
+}
+
 function getFishingSignalLabel(level) {
   return getText(`fishingSignalStage${level}`) || getText("fishingSignalNone");
 }
@@ -1285,20 +2401,8 @@ async function requestJson(action, payload = null, extraQuery = {}) {
   return data;
 }
 
-async function requestBinaryJson(action, payload = null, extraQuery = {}) {
-  const requestId = ++binaryRequestSequence;
-  const data = await requestJson(action, payload, {
-    symbol: binarySelectedSymbol,
-    ...extraQuery,
-  });
-  if (requestId !== binaryRequestSequence) {
-    return null;
-  }
-  return data;
-}
-
 function isBinaryBusy() {
-  return isGameLoading || binaryActionInFlight;
+  return isGameLoading;
 }
 
 async function loadMinesweeper() {
@@ -1318,9 +2422,13 @@ async function loadMinesweeper() {
 }
 
 async function revealCell(row, col) {
+  const previousStatus = currentState?.status;
   currentState = await requestJson("reveal", { row, col });
   minesTransientMessage = null;
   renderMinesweeper();
+  if (currentState?.status === "won" && previousStatus !== "won") {
+    celebrateWithFireworks();
+  }
 }
 
 async function toggleFlag(row, col) {
@@ -1432,109 +2540,329 @@ async function loadBinaryState() {
   isGameLoading = true;
   binaryTransientMessage = null;
   renderGameShell();
-
   try {
-    applyBinaryState(await requestBinaryJson("binary_state"));
-    if (Array.isArray(binaryState.durations) && !binaryState.durations.includes(binarySelectedDuration)) {
-      binarySelectedDuration = binaryState.defaultDuration || DEFAULT_BINARY_DURATION;
+    if (!binaryGame || binaryGame.status === "won" || binaryGame.status === "lost") {
+      initBinaryGame();
     }
+    rebuildBinaryViewState();
+    hasLoadedBinary = true;
   } finally {
     isGameLoading = false;
     renderGameShell();
-    if (selectedGame === "binary" && shouldBinaryPollState()) {
-      startBinaryPolling();
-    } else {
-      stopBinaryPolling();
-    }
+    startBinaryTick();
   }
 }
 
-async function refreshBinaryState() {
-  applyBinaryState(await requestBinaryJson("binary_state"));
-  renderBinaryPanel();
-}
-
-async function placeBinaryTrade(direction) {
-  if (selectedGame !== "binary") {
+function placeBinaryDecision(direction) {
+  if (!binaryGame || binaryGame.status !== "deciding") {
     return;
   }
   const stake = getCurrentStake();
-  binaryActionInFlight = true;
+  if (!Number.isFinite(stake) || stake < BINARY_MIN_STAKE) {
+    return;
+  }
+  if (stake > binaryGame.balance) {
+    return;
+  }
+  binaryGame.decision = direction;
+  binaryGame.stake = stake;
+  binaryGame.balance -= stake;
+  binaryGame.phaseStart = performance.now();
+  binaryGame.revealEndsAt = binaryGame.phaseStart + BINARY_REVEAL_MS;
+  binaryGame.revealedTicks = 1;
+  binaryGame.status = "revealing";
+  binaryTransientMessage = "binaryTradePlaced";
+  rebuildBinaryViewState();
   renderBinaryPanel();
-  try {
-    applyBinaryState(await requestBinaryJson("binary_trade", {
-      symbol: binarySelectedSymbol,
-      direction,
-      stake,
-      duration: binarySelectedDuration,
-    }));
-    binaryTransientMessage = "binaryTradePlaced";
-  } finally {
-    binaryActionInFlight = false;
+}
+
+function restartBinaryGame() {
+  initBinaryGame();
+  rebuildBinaryViewState();
+  renderBinaryPanel();
+  startBinaryTick();
+}
+
+function initBinaryGame() {
+  binaryGame = {
+    balance: BINARY_STARTING_BALANCE,
+    startingBalance: BINARY_STARTING_BALANCE,
+    targetBalance: BINARY_STARTING_BALANCE * BINARY_TARGET_MULTIPLIER,
+    status: "idle",
+    round: 0,
+    series: null,
+    decision: null,
+    stake: DEFAULT_BINARY_STAKE,
+    profit: 0,
+    result: null,
+    history: [],
+    phaseStart: 0,
+    decisionEndsAt: 0,
+    revealEndsAt: 0,
+    settledEndsAt: 0,
+    revealedTicks: 0,
+  };
+  startNextBinaryRound();
+}
+
+function startNextBinaryRound() {
+  if (!binaryGame) return;
+  if (binaryGame.balance >= binaryGame.targetBalance) {
+    binaryGame.status = "won";
+    return;
+  }
+  if (binaryGame.balance < BINARY_MIN_STAKE) {
+    binaryGame.status = "lost";
+    return;
+  }
+  binaryGame.round += 1;
+  binaryGame.series = pickBinarySeries();
+  binaryGame.decision = null;
+  binaryGame.result = null;
+  binaryGame.profit = 0;
+  binaryGame.revealedTicks = 1;
+  binaryGame.phaseStart = performance.now();
+  binaryGame.decisionEndsAt = binaryGame.phaseStart + BINARY_DECIDE_MS;
+  binaryGame.status = "deciding";
+  binarySelectedSymbol = binaryGame.series.label;
+}
+
+function pickBinarySeries() {
+  const lastId = binaryGame?.series?.id || null;
+  let candidate = BINARY_SERIES[Math.floor(Math.random() * BINARY_SERIES.length)];
+  for (let attempts = 0; attempts < 4 && candidate.id === lastId; attempts++) {
+    candidate = BINARY_SERIES[Math.floor(Math.random() * BINARY_SERIES.length)];
+  }
+  return candidate;
+}
+
+function tickBinaryGame() {
+  if (!binaryGame) return;
+  const now = performance.now();
+  let dirty = false;
+
+  if (binaryGame.status === "deciding") {
+    if (now >= binaryGame.decisionEndsAt) {
+      binaryGame.decision = null;
+      binaryGame.result = "skipped";
+      binaryGame.profit = 0;
+      binaryGame.revealedTicks = binaryGame.series ? binaryGame.series.prices.length : 0;
+      binaryGame.settledEndsAt = now + BINARY_SETTLED_MS;
+      binaryGame.status = "settled";
+      dirty = true;
+    }
+  } else if (binaryGame.status === "revealing") {
+    const elapsed = now - binaryGame.phaseStart;
+    const totalReveal = binaryGame.series.prices.length - 1;
+    const progress = Math.max(0, Math.min(1, elapsed / BINARY_REVEAL_MS));
+    const next = 1 + Math.floor(totalReveal * progress);
+    if (next !== binaryGame.revealedTicks) {
+      binaryGame.revealedTicks = next;
+      dirty = true;
+    }
+    if (now >= binaryGame.revealEndsAt) {
+      settleBinaryRound();
+      dirty = true;
+    }
+  } else if (binaryGame.status === "settled") {
+    if (now >= binaryGame.settledEndsAt) {
+      const previousStatus = binaryGame.status;
+      startNextBinaryRound();
+      if (binaryGame.status === "won" && previousStatus !== "won") {
+        celebrateWithFireworks(5200);
+      }
+      dirty = true;
+    }
+  }
+
+  rebuildBinaryViewState();
+  if (dirty) {
     renderBinaryPanel();
+  } else {
+    renderBinarySummary();
+    renderBinaryChart();
+    renderBinaryControls();
   }
 }
 
-async function startBinaryCase() {
-  if (selectedGame !== "binary") {
-    return;
+function settleBinaryRound() {
+  const series = binaryGame.series;
+  binaryGame.revealedTicks = series.prices.length;
+  const entry = series.prices[0];
+  const exit = series.prices[series.prices.length - 1];
+  const decision = binaryGame.decision;
+  let result = "draw";
+  if (exit > entry) result = decision === "up" ? "won" : "lost";
+  else if (exit < entry) result = decision === "down" ? "won" : "lost";
+  let payout = 0;
+  if (result === "won") {
+    payout = Math.round(binaryGame.stake * (1 + BINARY_PAYOUT_RATE));
+  } else if (result === "draw") {
+    payout = binaryGame.stake;
   }
-  binaryActionInFlight = true;
-  stopBinaryPolling();
-  renderBinaryPanel();
-  try {
-    applyBinaryState(await requestBinaryJson("binary_start", {}, { symbol: binarySelectedSymbol }));
-    binaryTransientMessage = null;
-  } finally {
-    binaryActionInFlight = false;
-    renderBinaryPanel();
-  }
+  binaryGame.balance += payout;
+  binaryGame.profit = payout - binaryGame.stake;
+  binaryGame.result = result;
+  binaryGame.history.unshift({
+    id: `${binaryGame.round}-${series.id}`,
+    round: binaryGame.round,
+    symbol: series.label,
+    direction: decision,
+    stake: binaryGame.stake,
+    entryPrice: formatBinaryPrice(entry, series.digits),
+    exitPrice: formatBinaryPrice(exit, series.digits),
+    result,
+    payout,
+    profit: binaryGame.profit,
+    settledAt: Math.floor(Date.now() / 1000),
+  });
+  binaryGame.history = binaryGame.history.slice(0, 12);
+  binaryGame.settledEndsAt = performance.now() + BINARY_SETTLED_MS;
+  binaryGame.status = "settled";
 }
 
-function applyBinaryState(nextState) {
-  if (!nextState) {
+function rebuildBinaryViewState() {
+  if (!binaryGame || !binaryGame.series) {
+    binaryState = {
+      balance: binaryGame?.balance ?? BINARY_STARTING_BALANCE,
+      startingBalance: BINARY_STARTING_BALANCE,
+      targetBalance: BINARY_STARTING_BALANCE * BINARY_TARGET_MULTIPLIER,
+      currency: "JPY",
+      selectedSymbol: binarySelectedSymbol,
+      symbols: [DEFAULT_BINARY_SYMBOL],
+      durations: [DEFAULT_BINARY_DURATION],
+      defaultDuration: DEFAULT_BINARY_DURATION,
+      minStake: BINARY_MIN_STAKE,
+      payoutRate: BINARY_PAYOUT_RATE,
+      tradingEnabled: false,
+      notices: [],
+      openPositions: [],
+      history: [],
+      provider: { name: "Local Replay", code: "local" },
+      quote: null,
+      chart: null,
+      caseInfo: null,
+      game: { status: binaryGame?.status || "idle", round: binaryGame?.round || 0 },
+    };
     return;
   }
-  const sameSymbol =
-    Boolean(binaryState) &&
-    Boolean(nextState) &&
-    binaryState.selectedSymbol === nextState.selectedSymbol;
-  binaryPreviousState = sameSymbol ? binaryState : null;
-  binaryState = nextState;
-  binaryStateTransitionStartedAt = performance.now();
-  hasLoadedBinary = true;
-  binarySelectedSymbol = binaryState.selectedSymbol || binarySelectedSymbol;
+
+  const series = binaryGame.series;
+  const revealed = binaryGame.status === "deciding"
+    ? series.prices.slice(0, 1)
+    : series.prices.slice(0, Math.max(1, binaryGame.revealedTicks));
+  const currentPrice = revealed[revealed.length - 1];
+  const entryPrice = series.prices[0];
+
+  const openPositions = (binaryGame.status === "revealing" || (binaryGame.status === "settled" && binaryGame.decision))
+    ? [
+        {
+          id: `round-${binaryGame.round}`,
+          symbol: series.label,
+          direction: binaryGame.decision,
+          stake: binaryGame.stake,
+          entryPrice: formatBinaryPrice(entryPrice, series.digits),
+          openedAt: Math.floor(Date.now() / 1000) - 5,
+          expiresAt: Math.floor(Date.now() / 1000) + 10,
+          secondsLeft: binaryGame.status === "revealing"
+            ? Math.max(0, Math.ceil((binaryGame.revealEndsAt - performance.now()) / 1000))
+            : 0,
+        },
+      ]
+    : [];
+
+  const notices = [];
+  if (binaryGame.status === "won") notices.push("binaryGameCleared");
+  if (binaryGame.status === "lost") notices.push("binaryGameOver");
+
+  binaryState = {
+    balance: binaryGame.balance,
+    startingBalance: binaryGame.startingBalance,
+    targetBalance: binaryGame.targetBalance,
+    currency: "JPY",
+    selectedSymbol: series.label,
+    symbols: [DEFAULT_BINARY_SYMBOL],
+    durations: [DEFAULT_BINARY_DURATION],
+    defaultDuration: DEFAULT_BINARY_DURATION,
+    minStake: BINARY_MIN_STAKE,
+    payoutRate: BINARY_PAYOUT_RATE,
+    tradingEnabled: binaryGame.status === "deciding",
+    notices,
+    openPositions,
+    history: binaryGame.history,
+    provider: { name: "Local Replay", code: "local" },
+    quote: {
+      symbol: series.label,
+      price: currentPrice,
+      displayPrice: formatBinaryPrice(currentPrice, series.digits),
+    },
+    chart: {
+      symbol: series.label,
+      history: revealed.slice(),
+      elapsedSeconds: revealed.length - 1,
+      totalSeconds: series.prices.length - 1,
+      priceDigits: series.digits,
+      currentPrice: formatBinaryPrice(currentPrice, series.digits),
+    },
+    caseInfo: {
+      symbol: series.label,
+      referenceDate: "",
+      startedAt: null,
+      started: binaryGame.status !== "idle",
+      elapsedSeconds: revealed.length - 1,
+      totalSeconds: series.prices.length - 1,
+      completed: binaryGame.status === "won" || binaryGame.status === "lost",
+    },
+    game: {
+      status: binaryGame.status,
+      round: binaryGame.round,
+      decisionMsLeft: Math.max(0, binaryGame.decisionEndsAt - performance.now()),
+      revealMsLeft: Math.max(0, binaryGame.revealEndsAt - performance.now()),
+      decision: binaryGame.decision,
+      result: binaryGame.result,
+      profit: binaryGame.profit,
+      stake: binaryGame.stake,
+    },
+  };
 }
 
 function renderBinarySummary() {
-  const providerName = binaryState?.provider?.name || getText("binaryProviderNameUnavailable");
-  const providerCode = binaryState?.provider?.code || "unavailable";
-  const caseInfo = binaryState?.caseInfo || null;
-  const playback = getBinaryPlaybackView();
-  binaryBalance.textContent = formatYen(binaryState?.balance ?? 0);
-  binaryQuote.textContent = playback
-    ? formatBinaryPrice(playback.price, playback.digits)
-    : binaryState?.quote?.displayPrice || "--";
-  binaryProvider.textContent = providerLabel(providerName, providerCode);
-  binaryStatusLine.textContent = binaryTransientMessage
-    ? getText(binaryTransientMessage)
-    : caseInfo && !caseInfo.started
-      ? (
-          getText("binaryStatusWaiting")
-          || (currentLanguage === "ja"
-            ? "PAIR を選んで開始を押すとケースが動きます。"
-            : "Pick a pair and press Start to begin the case.")
-        )
-    : caseInfo
-      ? template(getText("binaryCaseStatus"), {
-          symbol: caseInfo.symbol,
-          date: caseInfo.referenceDate,
-          elapsed: playback ? formatBinaryElapsed(playback.elapsedExact) : caseInfo.elapsedSeconds,
-          total: caseInfo.totalSeconds,
-        })
-      : getText("binaryStatusDefault");
-  binaryProviderLine.textContent = composeBinaryNotice(binaryState);
-  binaryMarketNote.textContent = composeBinaryNotice(binaryState);
+  const game = binaryState?.game || null;
+  binaryBalance.textContent = formatYen(binaryState?.balance ?? BINARY_STARTING_BALANCE);
+  binaryQuote.textContent = binaryState?.quote?.displayPrice || "--";
+  binaryProvider.textContent = String(game?.round ?? 0);
+
+  let line = "";
+  if (!game || game.status === "idle") {
+    line = getText("binaryStatusDefault");
+  } else if (game.status === "deciding") {
+    const seconds = Math.max(0, Math.ceil(game.decisionMsLeft / 1000));
+    line = template(getText("binaryStatusDeciding"), { seconds });
+  } else if (game.status === "revealing") {
+    const seconds = Math.max(0, Math.ceil(game.revealMsLeft / 1000));
+    line = template(getText("binaryStatusRevealing"), { seconds });
+  } else if (game.status === "settled") {
+    if (game.result === "won") {
+      line = template(getText("binaryStatusSettledWon"), { profit: formatYen(game.profit, true) });
+    } else if (game.result === "lost") {
+      line = getText("binaryStatusSettledLost");
+    } else if (game.result === "skipped") {
+      line = getText("binaryStatusSkipped");
+    } else {
+      line = getText("binaryStatusSettledDraw");
+    }
+  } else if (game.status === "won") {
+    line = getText("binaryStatusCleared");
+  } else if (game.status === "lost") {
+    line = getText("binaryStatusGameOver");
+  }
+  binaryStatusLine.textContent = line;
+
+  const target = binaryState?.targetBalance ?? BINARY_STARTING_BALANCE * BINARY_TARGET_MULTIPLIER;
+  binaryProviderLine.textContent = template(getText("binaryProgressLine"), {
+    round: game?.round ?? 0,
+    target: formatYen(target),
+  });
 }
 
 function renderBinaryPanel() {
@@ -1562,89 +2890,61 @@ function renderBinaryPanel() {
     getText("binaryHistoryEmpty"),
     renderHistoryItem,
   );
-  if (shouldBinaryPlaybackRun()) {
-    startBinaryPlaybackLoop();
+  if (selectedGame === "binary") {
+    startBinaryTick();
   } else {
-    stopBinaryPlaybackLoop();
-  }
-  if (shouldBinaryPollState()) {
-    startBinaryPolling();
-  } else {
-    stopBinaryPolling();
+    stopBinaryTick();
   }
 }
 
 function renderBinaryControls() {
-  const symbols = binaryState?.symbols || [binarySelectedSymbol];
-  const durations = binaryState?.durations || [binarySelectedDuration];
-  const caseInfo = binaryState?.caseInfo || null;
-  const caseStarted = Boolean(caseInfo?.started);
-  const caseCompleted = Boolean(caseInfo?.completed);
+  const game = binaryState?.game || null;
+  const status = game?.status || "idle";
   const busy = isBinaryBusy();
 
   binaryPairPicker.replaceChildren();
-  symbols.forEach((symbol) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = symbol;
-    button.classList.toggle("active", symbol === binarySelectedSymbol);
-    button.setAttribute("aria-pressed", String(symbol === binarySelectedSymbol));
-    button.disabled = busy;
-    button.addEventListener("click", async () => {
-      if (symbol === binarySelectedSymbol) {
-        return;
-      }
-      binarySelectedSymbol = symbol;
-      renderBinaryControls();
-      try {
-        await refreshBinaryState();
-      } catch (error) {
-        showBinaryError(error);
-      }
-    });
-    binaryPairPicker.appendChild(button);
-  });
+  const pairLabel = document.createElement("span");
+  pairLabel.className = "binary-current-symbol";
+  pairLabel.textContent = binaryState?.selectedSymbol || DEFAULT_BINARY_SYMBOL;
+  binaryPairPicker.appendChild(pairLabel);
 
-  binaryStartButton.textContent = caseStarted && caseCompleted
-    ? (
-        getText("binaryRestartAction")
-        || (currentLanguage === "ja" ? "もう一度開始" : "Restart")
-      )
-    : caseStarted
-      ? (
-          getText("binaryRunningAction")
-          || (currentLanguage === "ja" ? "進行中" : "Running")
-        )
-      : (
-          getText("binaryStartAction")
-          || (currentLanguage === "ja" ? "開始" : "Start")
-        );
-  binaryStartButton.disabled = busy || (caseStarted && !caseCompleted);
+  binaryStartButton.textContent = (status === "won" || status === "lost")
+    ? getText("binaryRestartAction")
+    : getText("binaryRunningAction");
+  binaryStartButton.disabled = busy || (status !== "won" && status !== "lost");
 
   binaryDurationPicker.replaceChildren();
-  durations.forEach((duration) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = template(getText("binarySeconds"), { seconds: duration });
-    button.classList.toggle("active", duration === binarySelectedDuration);
-    button.setAttribute("aria-pressed", String(duration === binarySelectedDuration));
-    button.disabled = busy;
-    button.addEventListener("click", () => {
-      binarySelectedDuration = duration;
-      renderBinaryControls();
+  const durLabel = document.createElement("span");
+  durLabel.className = "binary-current-duration";
+  if (status === "deciding") {
+    durLabel.textContent = template(getText("binaryDecidingTimer"), {
+      seconds: Math.max(0, Math.ceil((game?.decisionMsLeft || 0) / 1000)),
     });
-    binaryDurationPicker.appendChild(button);
-  });
+  } else if (status === "revealing") {
+    durLabel.textContent = template(getText("binaryRevealingTimer"), {
+      seconds: Math.max(0, Math.ceil((game?.revealMsLeft || 0) / 1000)),
+    });
+  } else if (status === "settled") {
+    durLabel.textContent = getText("binarySettledLabel");
+  } else if (status === "won") {
+    durLabel.textContent = getText("binaryClearedLabel");
+  } else if (status === "lost") {
+    durLabel.textContent = getText("binaryGameOverLabel");
+  } else {
+    durLabel.textContent = template(getText("binarySeconds"), { seconds: BINARY_DECIDE_MS / 1000 });
+  }
+  binaryDurationPicker.appendChild(durLabel);
 
   binaryStakePresets.replaceChildren();
-  binaryStakeInput.disabled = busy;
+  const decidingActive = status === "deciding";
+  binaryStakeInput.disabled = busy || !decidingActive;
   BINARY_STAKE_PRESETS.forEach((stake) => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = template(getText("binaryStakePreset"), { amount: formatInteger(stake) });
     button.classList.toggle("active", stake === getCurrentStake());
     button.setAttribute("aria-pressed", String(stake === getCurrentStake()));
-    button.disabled = busy;
+    button.disabled = busy || !decidingActive;
     button.addEventListener("click", () => {
       binaryStakeInput.value = String(stake);
       renderBinaryControls();
@@ -1655,8 +2955,7 @@ function renderBinaryControls() {
 
 function renderBinaryChart() {
   const chart = binaryState?.chart;
-  const playback = getBinaryPlaybackView();
-  if (!chart || !playback || !Array.isArray(chart.history) || chart.history.length === 0) {
+  if (!chart || !Array.isArray(chart.history) || chart.history.length === 0) {
     binaryChartPath.setAttribute("d", "");
     binaryChartFuture.setAttribute("d", "");
     binaryChartProgress.setAttribute("x1", "0");
@@ -1673,29 +2972,34 @@ function renderBinaryChart() {
     return;
   }
 
-  const windowPoints = playback.windowPoints;
-  const minPrice = Math.min(...windowPoints.map((point) => point.price));
-  const maxPrice = Math.max(...windowPoints.map((point) => point.price));
+  const totalSeconds = Math.max(1, Number(chart.totalSeconds) || (chart.history.length - 1));
+  const digits = Number(chart.priceDigits) || 3;
+  const revealedPrices = chart.history.slice();
+  const minPrice = Math.min(...revealedPrices);
+  const maxPrice = Math.max(...revealedPrices);
   const spread = Math.max(maxPrice - minPrice, Number.EPSILON);
-  const points = windowPoints.map((point) => {
-    const x = playback.windowSpan <= 0
-      ? 100
-      : (((point.elapsed - playback.windowStartElapsed) / playback.windowSpan) * 100);
-    const y = 30 - (((point.price - minPrice) / spread) * 24);
+  const padding = spread * 0.4;
+  const visualMin = minPrice - padding;
+  const visualMax = maxPrice + padding;
+  const visualSpread = Math.max(visualMax - visualMin, Number.EPSILON);
+
+  const revealedPoints = revealedPrices.map((price, index) => {
+    const x = (index / totalSeconds) * 100;
+    const y = 30 - (((price - visualMin) / visualSpread) * 24);
     return `${x.toFixed(2)},${y.toFixed(2)}`;
   });
-  const currentPoint = points.length > 0 ? points[points.length - 1].split(",") : ["0", "0"];
-  const progressX = currentPoint[0];
-  const digits = playback.digits;
 
-  binaryChartPath.setAttribute("d", buildPolylinePath(points));
+  const currentPoint = revealedPoints.length > 0 ? revealedPoints[revealedPoints.length - 1].split(",") : ["0", "0"];
+  const progressX = currentPoint[0];
+
+  binaryChartPath.setAttribute("d", buildPolylinePath(revealedPoints));
   binaryChartFuture.setAttribute("d", "");
   binaryChartProgress.setAttribute("x1", progressX);
   binaryChartProgress.setAttribute("x2", progressX);
   binaryChartPoint.setAttribute("cx", currentPoint[0]);
   binaryChartPoint.setAttribute("cy", currentPoint[1]);
   binaryChartNow.textContent = template(getText("binaryChartNow"), {
-    price: formatBinaryPrice(playback.price, digits),
+    price: formatBinaryPrice(revealedPrices[revealedPrices.length - 1], digits),
   });
   binaryChartRange.textContent = template(getText("binaryChartRange"), {
     min: formatBinaryPrice(minPrice, digits),
@@ -1703,7 +3007,39 @@ function renderBinaryChart() {
   });
   binaryChartMin.textContent = formatBinaryPrice(minPrice, digits);
   binaryChartMax.textContent = formatBinaryPrice(maxPrice, digits);
-  renderBinaryChartTicks(playback.windowStartElapsed, playback.windowEndElapsed);
+  renderBinaryChartTicks(0, totalSeconds);
+  renderBinaryChartOverlay();
+}
+
+function renderBinaryChartOverlay() {
+  if (!binaryChartTimer || !binaryChartOverlay) return;
+  const game = binaryState?.game || null;
+  const status = game?.status || "idle";
+  if (status === "deciding") {
+    binaryChartTimer.textContent = String(Math.max(0, Math.ceil((game?.decisionMsLeft || 0) / 1000)));
+    binaryChartOverlay.dataset.phase = "deciding";
+  } else if (status === "revealing") {
+    binaryChartTimer.textContent = String(Math.max(0, Math.ceil((game?.revealMsLeft || 0) / 1000)));
+    binaryChartOverlay.dataset.phase = "revealing";
+  } else if (status === "settled") {
+    binaryChartTimer.textContent = game?.result === "won"
+      ? getText("binaryResultWon")
+      : game?.result === "lost"
+        ? getText("binaryResultLost")
+        : game?.result === "draw"
+          ? getText("binaryResultDraw")
+          : getText("binaryStatusSkipped");
+    binaryChartOverlay.dataset.phase = "settled";
+  } else if (status === "won") {
+    binaryChartTimer.textContent = getText("binaryClearedLabel");
+    binaryChartOverlay.dataset.phase = "won";
+  } else if (status === "lost") {
+    binaryChartTimer.textContent = getText("binaryGameOverLabel");
+    binaryChartOverlay.dataset.phase = "lost";
+  } else {
+    binaryChartTimer.textContent = "--";
+    binaryChartOverlay.dataset.phase = "idle";
+  }
 }
 
 function buildPolylinePath(points) {
@@ -1711,83 +3047,6 @@ function buildPolylinePath(points) {
     return "";
   }
   return `M ${points[0]}${points.slice(1).map((point) => ` L ${point}`).join("")}`;
-}
-
-function getBinaryPlaybackView() {
-  const chart = binaryState?.chart;
-  const caseInfo = binaryState?.caseInfo;
-  if (!chart || !Array.isArray(chart.history) || chart.history.length === 0) {
-    return null;
-  }
-
-  const history = chart.history.map((value) => Number(value));
-  const totalSeconds = Number(chart.totalSeconds) || Math.max(0, history.length - 1);
-  const currentElapsed = Math.max(0, Math.min(Number(chart.elapsedSeconds) || 0, totalSeconds));
-  const previousElapsed =
-    binaryPreviousState?.selectedSymbol === binaryState?.selectedSymbol
-      ? Math.max(0, Math.min(Number(binaryPreviousState?.chart?.elapsedSeconds) || 0, currentElapsed))
-      : currentElapsed;
-  const transitionRange = Math.max(0, currentElapsed - previousElapsed);
-  const transitionProgress = transitionRange > 0
-    ? Math.min(1, Math.max(0, (performance.now() - binaryStateTransitionStartedAt) / 1000))
-    : 1;
-  const elapsedExact = previousElapsed + (transitionRange * transitionProgress);
-  const lowerIndex = Math.min(Math.floor(elapsedExact), history.length - 1);
-  const upperIndex = Math.min(lowerIndex + 1, history.length - 1);
-  const progress = Math.max(0, Math.min(elapsedExact - lowerIndex, 1));
-  const lowerPrice = history[lowerIndex];
-  const upperPrice = history[upperIndex];
-  const currentPrice = lowerPrice + ((upperPrice - lowerPrice) * progress);
-  const visibleBase = history.slice(0, lowerIndex + 1).map((price, index) => ({
-    elapsed: index,
-    price,
-  }));
-  const animatedPoints =
-    upperIndex > lowerIndex
-      ? [...visibleBase, { elapsed: elapsedExact, price: currentPrice }]
-      : visibleBase;
-  const windowEndElapsed = elapsedExact <= BINARY_CHART_WINDOW_SECONDS
-    ? BINARY_CHART_WINDOW_SECONDS
-    : elapsedExact;
-  const windowStartElapsed = Math.max(0, windowEndElapsed - BINARY_CHART_WINDOW_SECONDS);
-  const windowSpan = Math.max(1, windowEndElapsed - windowStartElapsed);
-  const windowPoints = [
-    {
-      elapsed: windowStartElapsed,
-      price: interpolateBinaryPrice(history, windowStartElapsed),
-    },
-  ];
-  animatedPoints.forEach((point) => {
-    if (point.elapsed > windowStartElapsed && point.elapsed <= elapsedExact) {
-      windowPoints.push(point);
-    }
-  });
-  if (windowPoints[windowPoints.length - 1].elapsed < elapsedExact) {
-    windowPoints.push({ elapsed: elapsedExact, price: currentPrice });
-  }
-
-  return {
-    digits: Number(chart.priceDigits) || 3,
-    elapsedExact,
-    price: currentPrice,
-    windowPoints,
-    windowStartElapsed,
-    windowEndElapsed,
-    windowSpan,
-  };
-}
-
-function interpolateBinaryPrice(history, elapsed) {
-  if (!history.length) {
-    return 0;
-  }
-  const boundedElapsed = Math.max(0, Math.min(elapsed, history.length - 1));
-  const lowerIndex = Math.floor(boundedElapsed);
-  const upperIndex = Math.min(lowerIndex + 1, history.length - 1);
-  const progress = Math.max(0, Math.min(boundedElapsed - lowerIndex, 1));
-  const lowerPrice = history[lowerIndex];
-  const upperPrice = history[upperIndex];
-  return lowerPrice + ((upperPrice - lowerPrice) * progress);
 }
 
 function renderBinaryChartTicks(windowStartElapsed, windowEndElapsed) {
@@ -1989,69 +3248,28 @@ function composeBinaryNotice(state) {
   return Array.from(new Set(notices)).join(" ");
 }
 
-function startBinaryPolling() {
-  if (binaryPollTimer !== null) {
+function startBinaryTick() {
+  if (binaryTickInterval !== null) {
     return;
   }
-  binaryPollTimer = window.setInterval(async () => {
-    if (selectedGame !== "binary" || isGameLoading) {
+  binaryTickInterval = window.setInterval(() => {
+    if (selectedGame !== "binary") {
+      stopBinaryTick();
       return;
     }
     try {
-      await refreshBinaryState();
+      tickBinaryGame();
     } catch (error) {
       showBinaryError(error);
     }
-  }, BINARY_POLL_MS);
+  }, 100);
 }
 
-function stopBinaryPolling() {
-  if (binaryPollTimer !== null) {
-    window.clearInterval(binaryPollTimer);
-    binaryPollTimer = null;
+function stopBinaryTick() {
+  if (binaryTickInterval !== null) {
+    window.clearInterval(binaryTickInterval);
+    binaryTickInterval = null;
   }
-}
-
-function startBinaryPlaybackLoop() {
-  if (binaryPlaybackFrame !== null) {
-    return;
-  }
-
-  const tick = () => {
-    if (selectedGame !== "binary" || !binaryState || isGameLoading) {
-      binaryPlaybackFrame = null;
-      return;
-    }
-    renderBinarySummary();
-    renderBinaryChart();
-    binaryPlaybackFrame = window.requestAnimationFrame(tick);
-  };
-
-  binaryPlaybackFrame = window.requestAnimationFrame(tick);
-}
-
-function stopBinaryPlaybackLoop() {
-  if (binaryPlaybackFrame !== null) {
-    window.cancelAnimationFrame(binaryPlaybackFrame);
-    binaryPlaybackFrame = null;
-  }
-}
-
-function shouldBinaryPollState() {
-  if (selectedGame !== "binary" || !hasLoadedBinary || !binaryState) {
-    return false;
-  }
-  if (Array.isArray(binaryState.openPositions) && binaryState.openPositions.length > 0) {
-    return true;
-  }
-  return Boolean(binaryState.caseInfo?.started && !binaryState.caseInfo?.completed);
-}
-
-function shouldBinaryPlaybackRun() {
-  if (selectedGame !== "binary" || !binaryState || isGameLoading) {
-    return false;
-  }
-  return Boolean(binaryState.caseInfo?.started && !binaryState.caseInfo?.completed);
 }
 
 function sleep(ms) {
@@ -2076,6 +3294,132 @@ function showMinesError(error) {
 function showBinaryError(error) {
   binaryTransientMessage = error && error.message ? error.message : "Request failed";
   renderGameShell();
+}
+
+// ── Fireworks Celebration ─────────────────────────────────────────────────
+
+const FIREWORKS_COLORS = [
+  "#ff5d6c", "#ffc857", "#7afcff", "#a8ff60", "#ff9efb", "#ffffff", "#ffae42",
+];
+
+let fireworksCanvas = null;
+let fireworksCtx = null;
+let fireworksParticles = [];
+let fireworksRafId = null;
+let fireworksEndAt = 0;
+let fireworksLastShotAt = 0;
+let fireworksHideTimer = null;
+
+function ensureFireworksCanvas() {
+  if (fireworksCanvas) return;
+  fireworksCanvas = document.createElement("canvas");
+  fireworksCanvas.className = "fireworks-canvas";
+  fireworksCanvas.setAttribute("aria-hidden", "true");
+  document.body.appendChild(fireworksCanvas);
+  fireworksCtx = fireworksCanvas.getContext("2d");
+  resizeFireworksCanvas();
+  window.addEventListener("resize", resizeFireworksCanvas);
+}
+
+function resizeFireworksCanvas() {
+  if (!fireworksCanvas) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  fireworksCanvas.width = Math.floor(window.innerWidth * dpr);
+  fireworksCanvas.height = Math.floor(window.innerHeight * dpr);
+  fireworksCanvas.style.width = `${window.innerWidth}px`;
+  fireworksCanvas.style.height = `${window.innerHeight}px`;
+  if (fireworksCtx) {
+    fireworksCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+}
+
+function spawnFireworkBurst(x, y) {
+  const color = FIREWORKS_COLORS[Math.floor(Math.random() * FIREWORKS_COLORS.length)];
+  const count = 60 + Math.floor(Math.random() * 30);
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.12;
+    const speed = 2 + Math.random() * 4;
+    fireworksParticles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.011 + Math.random() * 0.012,
+      color,
+      size: 1.6 + Math.random() * 1.6,
+    });
+  }
+}
+
+function tickFireworks(now) {
+  if (!fireworksCtx || !fireworksCanvas) return;
+  const ctx = fireworksCtx;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = "lighter";
+
+  if (now < fireworksEndAt && now - fireworksLastShotAt > 260) {
+    fireworksLastShotAt = now;
+    const x = w * (0.15 + Math.random() * 0.7);
+    const y = h * (0.15 + Math.random() * 0.4);
+    spawnFireworkBurst(x, y);
+  }
+
+  for (let i = fireworksParticles.length - 1; i >= 0; i--) {
+    const p = fireworksParticles[i];
+    p.vy += 0.045;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.99;
+    p.vy *= 0.99;
+    p.life -= p.decay;
+    if (p.life <= 0) {
+      fireworksParticles.splice(i, 1);
+      continue;
+    }
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  if (fireworksParticles.length > 0 || now < fireworksEndAt) {
+    fireworksRafId = requestAnimationFrame(tickFireworks);
+  } else {
+    fireworksRafId = null;
+    if (fireworksCanvas) {
+      fireworksCanvas.classList.remove("active");
+      fireworksHideTimer = window.setTimeout(() => {
+        if (fireworksCtx) {
+          fireworksCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        }
+        fireworksHideTimer = null;
+      }, 400);
+    }
+  }
+}
+
+function celebrateWithFireworks(durationMs = 3200) {
+  ensureFireworksCanvas();
+  resizeFireworksCanvas();
+  fireworksCanvas.classList.add("active");
+  if (fireworksHideTimer) {
+    window.clearTimeout(fireworksHideTimer);
+    fireworksHideTimer = null;
+  }
+  const now = performance.now();
+  fireworksEndAt = Math.max(fireworksEndAt, now + durationMs);
+  spawnFireworkBurst(window.innerWidth * 0.5, window.innerHeight * 0.35);
+  fireworksLastShotAt = now;
+  if (!fireworksRafId) {
+    fireworksRafId = requestAnimationFrame(tickFireworks);
+  }
 }
 
 function initLogoScene() {

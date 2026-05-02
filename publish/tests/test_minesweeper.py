@@ -8,14 +8,14 @@ except ModuleNotFoundError:
 
 class GameTests(unittest.TestCase):
     def test_first_click_is_safe(self) -> None:
-        game = Game(rows=9, cols=9, mines=10, label="easy")
-        game.reveal(4, 4)
+        game = Game(rows=5, cols=5, mines=5, label="easy")
+        game.reveal(2, 2)
 
-        center = game.to_public_state()["board"][4][4]
+        center = game.to_public_state()["board"][2][2]
         self.assertEqual(center["state"], "revealed")
 
     def test_flagging_hidden_cell_updates_count(self) -> None:
-        game = Game(rows=9, cols=9, mines=10, label="easy")
+        game = Game(rows=5, cols=5, mines=5, label="easy")
         state = game.toggle_flag(1, 1)
 
         self.assertEqual(state["flagsUsed"], 1)
