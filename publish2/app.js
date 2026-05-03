@@ -212,13 +212,18 @@ const COPY = {
     fishingSignalStage4: "多めに見える",
     fishingSignalStage5: "大量に見える",
     planetBodiesLabel: "天体数",
+    planetLifeLabel: "生命",
     planetStateLabel: "状態",
-    planetControlAdd: "クリックまたはタップで天体を追加。",
-    planetControlNote: "天体同士は引き合い、近づきすぎると合体します。",
+    planetTypeLabel: "設置タイプ",
+    planetTypeStar: "恒星",
+    planetTypePlanet: "惑星",
+    planetTypeAsteroid: "小惑星",
+    planetControlAdd: "設置タイプを選んでクリックまたはタップで配置。",
+    planetControlNote: "恒星の周りに惑星を置くと、距離で凍結・水・生命・灼熱と姿が変わります。",
     planetPause: "一時停止",
     planetResume: "再開",
     planetReset: "リセット",
-    planetHint: "キャンバスをクリックして天体を追加。最大20個まで。",
+    planetHint: "タイプを選んでキャンバスをクリック。最大20個まで。",
     planetStateRunning: "動作中",
     planetStatePaused: "一時停止",
     planetStateEmpty: "空",
@@ -514,13 +519,18 @@ const COPY = {
     fishingSignalStage4: "Heavy marks",
     fishingSignalStage5: "Dense school",
     planetBodiesLabel: "BODIES",
+    planetLifeLabel: "LIFE",
     planetStateLabel: "STATE",
-    planetControlAdd: "Click or tap to add a body.",
-    planetControlNote: "Bodies attract each other and merge when they get too close.",
+    planetTypeLabel: "PLACE",
+    planetTypeStar: "Star",
+    planetTypePlanet: "Planet",
+    planetTypeAsteroid: "Asteroid",
+    planetControlAdd: "Pick a body type, then click or tap to place it.",
+    planetControlNote: "Drop planets near a star — distance decides whether they freeze, bloom with water and life, or scorch.",
     planetPause: "Pause",
     planetResume: "Resume",
     planetReset: "Clear",
-    planetHint: "Click the canvas to add a body. Up to 20.",
+    planetHint: "Pick a type and click the canvas. Up to 20.",
     planetStateRunning: "Running",
     planetStatePaused: "Paused",
     planetStateEmpty: "Empty",
@@ -780,10 +790,12 @@ const planetPanel = document.getElementById("planet-panel");
 const mgmtPanel = document.getElementById("mgmt-panel");
 const solitairePanel = document.getElementById("solitaire-panel");
 const planetBodyCountEl = document.getElementById("planet-body-count");
+const planetLifeCountEl = document.getElementById("planet-life-count");
 const planetStateTextEl = document.getElementById("planet-state-text");
 const planetPauseButton = document.getElementById("planet-pause-button");
 const planetResetButton = document.getElementById("planet-reset-button");
 const planetCanvas = document.getElementById("planet-canvas");
+const planetTypeButtons = Array.from(document.querySelectorAll("[data-planet-type]"));
 const mgmtDayEl = document.getElementById("mgmt-day");
 const mgmtBalanceEl = document.getElementById("mgmt-balance");
 const mgmtCustomersEl = document.getElementById("mgmt-customers");
@@ -825,6 +837,7 @@ let planetAnimFrame = null;
 let planetCtx = null;
 let planetResizeFrame = null;
 let planetPausedByUser = false;
+let planetSelectedType = "star";
 let mgmtState = null;
 let solitaireState = null;
 let solitaireTimerInterval = null;
@@ -928,6 +941,15 @@ fishingSearchButton.addEventListener("click", () => {
   void runFishingScan(true);
 });
 
+planetTypeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const next = button.dataset.planetType;
+    if (!PLANET_TYPES[next]) return;
+    planetSelectedType = next;
+    syncPlanetTypeButtons();
+  });
+});
+
 planetCanvas.addEventListener("click", (e) => {
   if (selectedGame !== "planet") return;
   if (!planetCtx) initPlanetCanvas();
@@ -937,7 +959,7 @@ planetCanvas.addEventListener("click", (e) => {
   const scaleY = planetCanvas.height / rect.height;
   const x = (e.clientX - rect.left) * scaleX;
   const y = (e.clientY - rect.top) * scaleY;
-  planetBodies.push(createPlanetBody(x, y));
+  planetBodies.push(createPlanetBody(x, y, planetSelectedType));
   planetPausedByUser = false;
   if (!planetRunning) startPlanetLoop();
   renderPlanetToolbar();
@@ -1573,6 +1595,35 @@ function renderFishingLog() {
 const PLANET_G = 180;
 const PLANET_MAX_BODIES = 20;
 
+const PLANET_TYPE_PRIORITY = { star: 3, planet: 2, asteroid: 1 };
+const PLANET_TYPES = {
+  star: {
+    massBase: 220,
+    massVariance: 100,
+    radiusFactor: 3.0,
+    speedRange: [0, 5],
+    trailColor: "rgba(255, 210, 130, 0.18)",
+  },
+  planet: {
+    massBase: 4,
+    massVariance: 5,
+    radiusFactor: 2.5,
+    speedRange: [18, 50],
+    trailColor: "rgba(120, 190, 255, 0.22)",
+  },
+  asteroid: {
+    massBase: 0.4,
+    massVariance: 0.5,
+    radiusFactor: 2.4,
+    speedRange: [40, 95],
+    trailColor: "rgba(170, 170, 170, 0.18)",
+  },
+};
+
+const PLANET_HEAT_FROZEN = 0.25;
+const PLANET_HEAT_HOT = 4.0;
+const PLANET_LIFE_DELAY = 4.5;
+
 function initPlanetCanvas() {
   if (!planetCtx) {
     planetCtx = planetCanvas.getContext("2d");
@@ -1614,26 +1665,41 @@ function resizePlanetCanvas(force = false) {
   }
 }
 
-function createPlanetBody(x, y) {
-  const mass = 3 + Math.random() * 7;
-  const radius = Math.max(4, Math.cbrt(mass) * 2.5);
-  const hue = Math.floor(Math.random() * 360);
+function planetRadiusFor(type, mass) {
+  const config = PLANET_TYPES[type] || PLANET_TYPES.planet;
+  return Math.max(3, Math.cbrt(Math.max(0.1, mass)) * config.radiusFactor);
+}
+
+function createPlanetBody(x, y, typeKey) {
+  const type = PLANET_TYPES[typeKey] ? typeKey : "planet";
+  const config = PLANET_TYPES[type];
+  const mass = config.massBase + Math.random() * config.massVariance;
   const cx = (planetCanvas.width || 600) / 2;
   const cy = (planetCanvas.height || 400) / 2;
   const dx = x - cx;
   const dy = y - cy;
-  const speed = 25 + Math.random() * 45;
-  const angle = Math.atan2(dy, dx) + Math.PI / 2 + (Math.random() - 0.5) * 0.8;
+  const [minSpeed, maxSpeed] = config.speedRange;
+  const speed = minSpeed + Math.random() * Math.max(0, maxSpeed - minSpeed);
+  const angle = Math.atan2(dy, dx) + Math.PI / 2 + (Math.random() - 0.5) * 0.6;
+  const hue = type === "star"
+    ? 30 + Math.random() * 25
+    : type === "asteroid"
+      ? 28 + Math.random() * 18
+      : 210;
   return {
+    type,
     x,
     y,
     vx: Math.cos(angle) * speed,
     vy: Math.sin(angle) * speed,
     mass,
-    radius,
+    radius: planetRadiusFor(type, mass),
     hue,
-    color: `hsl(${hue}, 70%, 65%)`,
-    trailColor: `hsla(${hue}, 70%, 45%, 0.25)`,
+    seed: Math.random(),
+    pulse: Math.random() * Math.PI * 2,
+    state: type === "planet" ? "barren" : null,
+    habitableTime: 0,
+    trailColor: config.trailColor,
     trail: [],
   };
 }
@@ -1690,44 +1756,118 @@ function stepPlanets(dt) {
     planetBodies[i].vx += ax[i] * dt;
     planetBodies[i].vy += ay[i] * dt;
     planetBodies[i].trail.push({ x: planetBodies[i].x, y: planetBodies[i].y });
-    if (planetBodies[i].trail.length > 28) {
+    const trailLimit = planetBodies[i].type === "star" ? 8 : 28;
+    if (planetBodies[i].trail.length > trailLimit) {
       planetBodies[i].trail.shift();
     }
     planetBodies[i].x += planetBodies[i].vx * dt;
     planetBodies[i].y += planetBodies[i].vy * dt;
+    planetBodies[i].pulse += dt * 1.4;
   }
 
-  const merged = new Uint8Array(n);
-  for (let i = 0; i < n; i++) {
+  let lifeChanged = false;
+  for (let i = 0; i < planetBodies.length; i++) {
+    const body = planetBodies[i];
+    if (body.type !== "planet") continue;
+    const heat = computePlanetHeat(body, planetBodies);
+    const wasAlive = body.state === "alive";
+    if (heat < PLANET_HEAT_FROZEN) {
+      body.state = "frozen";
+      body.habitableTime = Math.max(0, body.habitableTime - dt * 1.5);
+    } else if (heat > PLANET_HEAT_HOT) {
+      body.state = "scorched";
+      body.habitableTime = Math.max(0, body.habitableTime - dt * 1.5);
+    } else {
+      body.habitableTime += dt;
+      body.state = body.habitableTime >= PLANET_LIFE_DELAY ? "alive" : "habitable";
+    }
+    if (wasAlive !== (body.state === "alive")) {
+      lifeChanged = true;
+    }
+  }
+
+  const merged = new Uint8Array(planetBodies.length);
+  for (let i = 0; i < planetBodies.length; i++) {
     if (merged[i]) continue;
-    for (let j = i + 1; j < n; j++) {
+    for (let j = i + 1; j < planetBodies.length; j++) {
       if (merged[j]) continue;
-      const dx = planetBodies[j].x - planetBodies[i].x;
-      const dy = planetBodies[j].y - planetBodies[i].y;
+      const a = planetBodies[i];
+      const b = planetBodies[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
       const r = Math.sqrt(dx * dx + dy * dy);
-      if (r < (planetBodies[i].radius + planetBodies[j].radius) * 0.85) {
-        const tm = planetBodies[i].mass + planetBodies[j].mass;
-        planetBodies[i].x =
-          (planetBodies[i].x * planetBodies[i].mass + planetBodies[j].x * planetBodies[j].mass) / tm;
-        planetBodies[i].y =
-          (planetBodies[i].y * planetBodies[i].mass + planetBodies[j].y * planetBodies[j].mass) / tm;
-        planetBodies[i].vx =
-          (planetBodies[i].vx * planetBodies[i].mass + planetBodies[j].vx * planetBodies[j].mass) / tm;
-        planetBodies[i].vy =
-          (planetBodies[i].vy * planetBodies[i].mass + planetBodies[j].vy * planetBodies[j].mass) / tm;
-        planetBodies[i].mass = tm;
-        planetBodies[i].radius = Math.max(4, Math.cbrt(tm) * 2.5);
-        planetBodies[i].trail = [];
+      if (r < (a.radius + b.radius) * 0.85) {
+        const tm = a.mass + b.mass;
+        a.x = (a.x * a.mass + b.x * b.mass) / tm;
+        a.y = (a.y * a.mass + b.y * b.mass) / tm;
+        a.vx = (a.vx * a.mass + b.vx * b.mass) / tm;
+        a.vy = (a.vy * a.mass + b.vy * b.mass) / tm;
+        a.mass = tm;
+        const winner = (PLANET_TYPE_PRIORITY[b.type] || 0) > (PLANET_TYPE_PRIORITY[a.type] || 0)
+          ? b.type
+          : a.type;
+        if (winner !== a.type) {
+          a.type = winner;
+          a.hue = winner === "star"
+            ? 30 + Math.random() * 25
+            : winner === "asteroid"
+              ? 28 + Math.random() * 18
+              : 210;
+          a.trailColor = PLANET_TYPES[winner].trailColor;
+        }
+        a.radius = planetRadiusFor(a.type, a.mass);
+        a.trail = [];
+        if (a.type === "planet") {
+          a.state = a.state || "barren";
+        } else {
+          a.state = null;
+          a.habitableTime = 0;
+        }
         merged[j] = 1;
+        lifeChanged = true;
       }
     }
   }
 
-  if (merged.some((v) => v)) {
-    planetBodies = planetBodies.filter((_, i) => !merged[i]);
+  if (lifeChanged || merged.some((v) => v)) {
+    if (merged.some((v) => v)) {
+      planetBodies = planetBodies.filter((_, i) => !merged[i]);
+    }
     renderPlanetToolbar();
   }
 }
+
+function computePlanetHeat(body, bodies) {
+  let heat = 0;
+  for (const star of bodies) {
+    if (star === body || star.type !== "star") continue;
+    const dx = star.x - body.x;
+    const dy = star.y - body.y;
+    const r2 = dx * dx + dy * dy;
+    if (r2 < 25) {
+      heat += star.mass / 25;
+    } else {
+      heat += star.mass / r2;
+    }
+  }
+  return heat;
+}
+
+function countPlanetLife() {
+  let count = 0;
+  for (const body of planetBodies) {
+    if (body.type === "planet" && body.state === "alive") count++;
+  }
+  return count;
+}
+
+const PLANET_STATE_PALETTE = {
+  barren: { base: "#7a6a55", glow: "rgba(140, 120, 90, 0.20)", accent: "#5d503e" },
+  frozen: { base: "#cde2ee", glow: "rgba(190, 220, 240, 0.32)", accent: "#fdfdff" },
+  habitable: { base: "#3a86c4", glow: "rgba(70, 150, 220, 0.36)", accent: "#5b8a4b" },
+  alive: { base: "#2d9bd0", glow: "rgba(70, 220, 130, 0.40)", accent: "#3acb6a" },
+  scorched: { base: "#cc3a1a", glow: "rgba(220, 80, 30, 0.40)", accent: "#ffd76a" },
+};
 
 function drawPlanets() {
   if (!planetCtx) return;
@@ -1750,23 +1890,114 @@ function drawPlanets() {
       ctx.stroke();
     }
 
-    const grd = ctx.createRadialGradient(body.x, body.y, 0, body.x, body.y, body.radius * 2.5);
-    grd.addColorStop(0, body.color);
-    grd.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = grd;
-    ctx.beginPath();
-    ctx.arc(body.x, body.y, body.radius * 2.5, 0, Math.PI * 2);
-    ctx.fill();
+    if (body.type === "star") {
+      drawStarBody(ctx, body);
+    } else if (body.type === "asteroid") {
+      drawAsteroidBody(ctx, body);
+    } else {
+      drawPlanetBody(ctx, body);
+    }
+  }
+}
 
-    ctx.fillStyle = body.color;
+function drawStarBody(ctx, body) {
+  const pulse = 1 + Math.sin(body.pulse) * 0.06;
+  const halo = ctx.createRadialGradient(body.x, body.y, 0, body.x, body.y, body.radius * 4);
+  halo.addColorStop(0, `hsla(${body.hue}, 100%, 75%, 0.85)`);
+  halo.addColorStop(0.4, `hsla(${body.hue}, 100%, 60%, 0.35)`);
+  halo.addColorStop(1, `hsla(${body.hue}, 100%, 50%, 0)`);
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(body.x, body.y, body.radius * 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = `hsl(${body.hue}, 100%, 78%)`;
+  ctx.beginPath();
+  ctx.arc(body.x, body.y, body.radius * pulse, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255, 255, 240, 0.9)";
+  ctx.beginPath();
+  ctx.arc(body.x, body.y, body.radius * 0.45 * pulse, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawAsteroidBody(ctx, body) {
+  const halo = ctx.createRadialGradient(body.x, body.y, 0, body.x, body.y, body.radius * 1.8);
+  halo.addColorStop(0, `hsla(${body.hue}, 28%, 55%, 0.45)`);
+  halo.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(body.x, body.y, body.radius * 1.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = `hsl(${body.hue}, 22%, 55%)`;
+  ctx.beginPath();
+  ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPlanetBody(ctx, body) {
+  const palette = PLANET_STATE_PALETTE[body.state] || PLANET_STATE_PALETTE.barren;
+
+  const glow = ctx.createRadialGradient(body.x, body.y, body.radius, body.x, body.y, body.radius * 2.6);
+  glow.addColorStop(0, palette.glow);
+  glow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(body.x, body.y, body.radius * 2.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = palette.base;
+  ctx.beginPath();
+  ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (body.state === "habitable" || body.state === "alive") {
+    drawPlanetContinents(ctx, body, palette);
+  } else if (body.state === "frozen") {
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.lineWidth = Math.max(1, body.radius * 0.18);
     ctx.beginPath();
-    ctx.arc(body.x, body.y, body.radius, 0, Math.PI * 2);
+    ctx.arc(body.x, body.y, body.radius * 0.92, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (body.state === "scorched") {
+    ctx.strokeStyle = "rgba(255, 220, 120, 0.55)";
+    ctx.lineWidth = Math.max(1, body.radius * 0.12);
+    ctx.beginPath();
+    const cracks = 3;
+    for (let k = 0; k < cracks; k++) {
+      const a = body.seed * Math.PI * 2 + (k * Math.PI * 2) / cracks;
+      ctx.moveTo(body.x + Math.cos(a) * body.radius * 0.2, body.y + Math.sin(a) * body.radius * 0.2);
+      ctx.lineTo(body.x + Math.cos(a) * body.radius * 0.85, body.y + Math.sin(a) * body.radius * 0.85);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawPlanetContinents(ctx, body, palette) {
+  const isAlive = body.state === "alive";
+  ctx.fillStyle = palette.accent;
+  const spots = isAlive ? 3 : 2;
+  for (let k = 0; k < spots; k++) {
+    const seed = (body.seed + k * 0.37) % 1;
+    const angle = seed * Math.PI * 2;
+    const radial = 0.25 + ((body.seed * (k + 1) * 1.7) % 1) * 0.45;
+    const ox = Math.cos(angle) * body.radius * radial;
+    const oy = Math.sin(angle) * body.radius * radial;
+    const blob = body.radius * (isAlive ? 0.32 : 0.26);
+    ctx.beginPath();
+    ctx.arc(body.x + ox, body.y + oy, blob, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
 function renderPlanetToolbar() {
   planetBodyCountEl.textContent = String(planetBodies.length);
+  if (planetLifeCountEl) {
+    planetLifeCountEl.textContent = String(countPlanetLife());
+  }
+  syncPlanetTypeButtons();
   if (planetBodies.length === 0) {
     planetStateTextEl.textContent = getText("planetStateEmpty");
     planetPauseButton.textContent = getText("planetPause");
@@ -1781,6 +2012,14 @@ function renderPlanetToolbar() {
       planetPauseButton.textContent = getText("planetResume");
     }
   }
+}
+
+function syncPlanetTypeButtons() {
+  planetTypeButtons.forEach((button) => {
+    const isActive = button.dataset.planetType === planetSelectedType;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
 }
 
 // ── Management Simulation ──────────────────────────────────────────────────

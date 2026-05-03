@@ -16,7 +16,7 @@
       }
     }
   </script>
-<link href="/static/styles.css?v=20260503c" rel="stylesheet"/>
+<link href="/static/styles.css?v=20260503d" rel="stylesheet"/>
 
 </head>
 <body>
@@ -227,15 +227,27 @@
 <strong id="planet-body-count">0</strong>
 </div>
 <div class="metric-card">
+<span class="metric-label" data-i18n="planetLifeLabel">生命</span>
+<strong id="planet-life-count">0</strong>
+</div>
+<div class="metric-card">
 <span class="metric-label" data-i18n="planetStateLabel">状態</span>
 <strong id="planet-state-text">—</strong>
+</div>
+</div>
+<div class="planet-type-cluster">
+<span class="tool-label" data-i18n="planetTypeLabel">PLACE</span>
+<div class="difficulty-picker planet-type-picker">
+<button class="active" data-planet-type="star" data-i18n="planetTypeStar" type="button">恒星</button>
+<button data-planet-type="planet" data-i18n="planetTypePlanet" type="button">惑星</button>
+<button data-planet-type="asteroid" data-i18n="planetTypeAsteroid" type="button">小惑星</button>
 </div>
 </div>
 </div>
 <div class="toolbar-row toolbar-notes">
 <div class="control-copy">
-<p data-i18n="planetControlAdd">クリックまたはタップで天体を追加。</p>
-<p data-i18n="planetControlNote">天体同士は引き合い、近づきすぎると合体します。</p>
+<p data-i18n="planetControlAdd">設置タイプを選んでクリックまたはタップで配置。</p>
+<p data-i18n="planetControlNote">恒星の周りに惑星を置くと、距離で凍結・水・生命・灼熱と姿が変わります。</p>
 </div>
 <div class="game-actions">
 <button class="button button-ghost" data-i18n="planetPause" id="planet-pause-button" type="button">一時停止</button>
@@ -435,7 +447,7 @@
 </article>
 </section>
 <section class="planet-panel" hidden="" id="planet-panel">
-<p class="planet-hint" data-i18n="planetHint" id="planet-hint">キャンバスをクリックして天体を追加。最大20個まで。</p>
+<p class="planet-hint" data-i18n="planetHint" id="planet-hint">タイプを選んでキャンバスをクリック。最大20個まで。</p>
 <canvas class="planet-canvas" id="planet-canvas"></canvas>
 </section>
 <section class="mgmt-panel" hidden="" id="mgmt-panel">
@@ -544,6 +556,6 @@
 </div>
 <a class="footer-link" data-i18n="footerLink" href="#top">先頭へ戻る</a></footer>
 </div>
-<script src="/static/app.js?v=20260503c" type="module"></script>
+<script src="/static/app.js?v=20260503d" type="module"></script>
 </body>
 </html>

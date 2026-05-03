@@ -768,6 +768,17 @@ main {
   min-width: 270px;
 }
 
+.planet-type-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 270px;
+}
+
+.planet-type-picker {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .difficulty-picker,
 .binary-pill-row {
   display: grid;
