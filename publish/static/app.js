@@ -925,6 +925,14 @@ let planetMotesPlaced = 0;
 let planetSupernovas = 0;
 let planetOverlayTimer = null;
 let planetOverlayShownPhase = -1;
+// Camera state: world-to-canvas transform that lets the supernova phase
+// dolly in on the surviving star so several orbits fit comfortably.
+let planetCamX = 0;
+let planetCamY = 0;
+let planetCamZoom = 1;
+let planetCamTargetX = 0;
+let planetCamTargetY = 0;
+let planetCamTargetZoom = 1;
 let mgmtState = null;
 let solitaireState = null;
 let solitaireTimerInterval = null;
@@ -1042,8 +1050,13 @@ planetCanvas.addEventListener("click", (e) => {
   const rect = planetCanvas.getBoundingClientRect();
   const scaleX = planetCanvas.width / rect.width;
   const scaleY = planetCanvas.height / rect.height;
-  const x = (e.clientX - rect.left) * scaleX;
-  const y = (e.clientY - rect.top) * scaleY;
+  const px = (e.clientX - rect.left) * scaleX;
+  const py = (e.clientY - rect.top) * scaleY;
+  // Reverse the camera transform so clicks land on the same point in world
+  // space the user sees on screen.
+  const world = planetCanvasToWorld(px, py);
+  const x = world.x;
+  const y = world.y;
 
   let acted = false;
   if (planetPhase === PLANET_PHASE_INFLATION || planetPhase === PLANET_PHASE_STARS) {
@@ -1093,6 +1106,7 @@ planetResetButton.addEventListener("click", () => {
   planetPausedByUser = false;
   planetOverlayShownPhase = -1;
   hidePlanetIntroOverlay();
+  resetPlanetCamera();
   if (planetCtx) {
     planetCtx.fillStyle = "rgb(3, 8, 20)";
     planetCtx.fillRect(0, 0, planetCanvas.width, planetCanvas.height);
@@ -1721,6 +1735,7 @@ const GAS_TO_STAR_MASS = 80;
 const STARS_PHASE_TARGET = 1;
 const SUPERNOVA_TARGET = 1;
 const ASTEROID_HABITABLE_BONUS = 1.6;
+const ASTEROID_TO_PLANET_MASS = 10;
 const LIFE_DURATION_TARGET = 5;
 
 const PLANET_TYPE_PRIORITY = { star: 5, planet: 4, gas: 3, asteroid: 2, mote: 1 };
@@ -1776,6 +1791,49 @@ function initPlanetCanvas() {
     planetCtx = planetCanvas.getContext("2d");
   }
   resizePlanetCanvas(true);
+  // Centre the camera on the canvas centre at 1x zoom whenever we (re)init.
+  const cw = planetCanvas.width || 600;
+  const ch = planetCanvas.height || 400;
+  planetCamX = cw / 2;
+  planetCamY = ch / 2;
+  planetCamZoom = 1;
+  planetCamTargetX = planetCamX;
+  planetCamTargetY = planetCamY;
+  planetCamTargetZoom = planetCamZoom;
+}
+
+function startPlanetCameraZoom(targetX, targetY, zoom) {
+  planetCamTargetX = targetX;
+  planetCamTargetY = targetY;
+  planetCamTargetZoom = zoom;
+}
+
+function resetPlanetCamera() {
+  const cw = planetCanvas.width || 600;
+  const ch = planetCanvas.height || 400;
+  planetCamX = cw / 2;
+  planetCamY = ch / 2;
+  planetCamZoom = 1;
+  planetCamTargetX = planetCamX;
+  planetCamTargetY = planetCamY;
+  planetCamTargetZoom = 1;
+}
+
+function stepPlanetCamera(dt) {
+  // Critically-damped-ish lerp toward the target.
+  const k = Math.min(1, dt * 3.5);
+  planetCamX += (planetCamTargetX - planetCamX) * k;
+  planetCamY += (planetCamTargetY - planetCamY) * k;
+  planetCamZoom += (planetCamTargetZoom - planetCamZoom) * k;
+}
+
+function planetCanvasToWorld(px, py) {
+  const cw = planetCanvas.width || 600;
+  const ch = planetCanvas.height || 400;
+  return {
+    x: (px - cw / 2) / planetCamZoom + planetCamX,
+    y: (py - ch / 2) / planetCamZoom + planetCamY,
+  };
 }
 
 function resizePlanetCanvas(force = false) {
@@ -1925,6 +1983,7 @@ function startPlanetLoop() {
     const dt = Math.min((now - lastTime) / 1000, 0.033);
     lastTime = now;
     stepPlanets(dt);
+    stepPlanetCamera(dt);
     drawPlanets();
     planetAnimFrame = requestAnimationFrame(loop);
   }
@@ -1966,8 +2025,18 @@ function stepPlanets(dt) {
 
   for (let i = 0; i < n; i++) {
     const body = planetBodies[i];
-    body.vx += ax[i] * dt;
-    body.vy += ay[i] * dt;
+    // Stars are treated as fixed gravity wells: they hold their position so
+    // the user always knows where the system's centre is. Other bodies still
+    // feel their pull (the acceleration loop above already used star.mass).
+    if (body.type !== "star") {
+      body.vx += ax[i] * dt;
+      body.vy += ay[i] * dt;
+      body.x += body.vx * dt;
+      body.y += body.vy * dt;
+    } else {
+      body.vx = 0;
+      body.vy = 0;
+    }
     body.trail.push({ x: body.x, y: body.y });
     const trailLimit = body.type === "star"
       ? 8
@@ -1977,8 +2046,6 @@ function stepPlanets(dt) {
           ? 16
           : 28;
     if (body.trail.length > trailLimit) body.trail.shift();
-    body.x += body.vx * dt;
-    body.y += body.vy * dt;
     body.pulse += dt * 1.4;
     if (body.flash > 0) body.flash = Math.max(0, body.flash - dt * 2.0);
   }
@@ -1992,17 +2059,20 @@ function stepPlanets(dt) {
     if (heat < PLANET_HEAT_FROZEN) {
       body.state = "frozen";
       body.habitableTime = Math.max(0, body.habitableTime - dt * 1.5);
-      body.aliveTime = 0;
+      // Once life took hold it doesn't vanish instantly when the planet
+      // briefly drifts colder/hotter — it just decays. This forgives
+      // mildly elliptical orbits.
+      body.aliveTime = Math.max(0, (body.aliveTime || 0) - dt * 0.5);
     } else if (heat > PLANET_HEAT_HOT) {
       body.state = "scorched";
       body.habitableTime = Math.max(0, body.habitableTime - dt * 1.5);
-      body.aliveTime = 0;
+      body.aliveTime = Math.max(0, (body.aliveTime || 0) - dt * 0.5);
     } else {
       body.habitableTime += dt;
       body.state = body.habitableTime >= PLANET_LIFE_DELAY ? "alive" : "habitable";
       if (body.state === "alive") {
         body.aliveTime = (body.aliveTime || 0) + dt;
-      } else {
+      } else if (!body.aliveTime) {
         body.aliveTime = 0;
       }
     }
@@ -2062,6 +2132,14 @@ function stepPlanets(dt) {
       if ((resultType === "mote" || resultType === "gas") && a.mass >= GAS_TO_STAR_MASS) {
         resultType = "star";
       }
+      // Asteroids that accrete enough mass become protoplanets. This is what
+      // turns the supernova debris ring into a proper solar system without
+      // the player needing to manually click each planet into place.
+      let promotedFromAsteroid = false;
+      if (resultType === "asteroid" && a.mass >= ASTEROID_TO_PLANET_MASS) {
+        resultType = "planet";
+        promotedFromAsteroid = true;
+      }
       if (resultType !== a.type) {
         a.type = resultType;
         a.hue = planetHueFor(resultType);
@@ -2071,6 +2149,59 @@ function stepPlanets(dt) {
       a.trail = [];
       if (a.type === "planet") {
         a.state = a.state || "barren";
+        // A planet that grew from accreted dust+rock arrives carrying water
+        // and heavy elements already, so we hand it a habitable-time head
+        // start. If its orbit keeps it in the habitable band it can become
+        // alive within a couple of seconds rather than from zero.
+        if (promotedFromAsteroid && (a.habitableTime || 0) < PLANET_LIFE_DELAY * 0.7) {
+          a.habitableTime = PLANET_LIFE_DELAY * 0.7;
+        }
+        // Re-circularise the protoplanet's orbit around the dominant star.
+        // Pure mass-weighted COM velocities from accretion are usually not
+        // circular, which sends new planets into wildly elliptical orbits
+        // that swing through the scorched and frozen bands. A clean tangent
+        // velocity at the current radius keeps the orbit livable.
+        if (planetPhase >= PLANET_PHASE_PLANETS) {
+          let bestStar = null;
+          let bestD2 = Infinity;
+          for (const body of planetBodies) {
+            if (body.type !== "star") continue;
+            const ddx = a.x - body.x;
+            const ddy = a.y - body.y;
+            const dd2 = ddx * ddx + ddy * ddy;
+            if (dd2 < bestD2) {
+              bestD2 = dd2;
+              bestStar = body;
+            }
+          }
+          if (bestStar) {
+            const ddx = a.x - bestStar.x;
+            const ddy = a.y - bestStar.y;
+            const dr = Math.hypot(ddx, ddy);
+            if (dr > 1) {
+              const orbitV = Math.sqrt(
+                (PLANET_G * bestStar.mass * dr) / (dr * dr + PLANET_SOFTENING),
+              );
+              const tx = -ddy / dr;
+              const ty = ddx / dr;
+              const radialDot = (a.vx * ddx + a.vy * ddy) / dr; // outward radial component
+              const tangentDot = a.vx * tx + a.vy * ty;
+              const desiredSpin = tangentDot >= 0 ? 1 : -1;
+              a.vx = bestStar.vx + tx * orbitV * desiredSpin + (radialDot * 0.3) * (ddx / dr);
+              a.vy = bestStar.vy + ty * orbitV * desiredSpin + (radialDot * 0.3) * (ddy / dr);
+            }
+          }
+        }
+      } else if (a.type === "star") {
+        // A newborn star locks onto the canvas centre so the player has a
+        // dependable anchor to orbit. Velocity is zeroed permanently.
+        a.x = (planetCanvas.width || 600) / 2;
+        a.y = (planetCanvas.height || 400) / 2;
+        a.vx = 0;
+        a.vy = 0;
+        a.state = null;
+        a.habitableTime = 0;
+        a.aliveTime = 0;
       } else {
         a.state = null;
         a.habitableTime = 0;
@@ -2125,32 +2256,55 @@ function maybeAdvancePlanetPhase() {
 function triggerPlanetSupernova(star) {
   const idx = planetBodies.indexOf(star);
   if (idx < 0) return false;
-  const cx = star.x;
-  const cy = star.y;
+  // Lock the surviving star to the canvas centre so the user can rely on a
+  // fixed sun to navigate around. Other bodies will still orbit it.
+  const cw = planetCanvas.width || 600;
+  const ch = planetCanvas.height || 400;
+  const cx = cw / 2;
+  const cy = ch / 2;
+  star.x = cx;
+  star.y = cy;
+  star.vx = 0;
+  star.vy = 0;
+
   // Supernova leaves a remnant (white-dwarf / neutron-star-style core) so
-  // there is always a sun for the planets phase. The original mass is
-  // partially shed as asteroids carrying heavy elements.
+  // there is always a sun for the planets phase. The remnant is plumped up
+  // here so the habitable zone is wide enough for several distinct orbits.
   const originalRadius = star.radius;
-  const remnantMass = Math.max(140, Math.min(280, star.mass * 0.45));
+  const remnantMass = Math.max(520, Math.min(840, star.mass * 0.85 + 200));
   star.mass = remnantMass;
   star.radius = planetRadiusFor("star", remnantMass);
-  star.vx *= 0.4;
-  star.vy *= 0.4;
   if (star.trail) star.trail.length = 0;
-  const count = 7 + Math.floor(Math.random() * 4);
+
+  // Spawn a dust+rock disk on near-circular orbits. With low radial jitter
+  // and orbital tangential velocity, asteroids settle, cross paths, and
+  // accrete into protoplanets without further user input.
   const config = PLANET_TYPES.asteroid;
+  const count = 14 + Math.floor(Math.random() * 5);
+  // Centre the dust ring around the middle of the habitable band for the
+  // remnant star so accreted protoplanets land in a livable orbit.
+  const habInner = Math.sqrt(remnantMass / PLANET_HEAT_HOT);
+  const habOuter = Math.sqrt(remnantMass / PLANET_HEAT_FROZEN);
+  const baseR = (habInner + habOuter) / 2;
+  const halfBand = (habOuter - habInner) * 0.4;
   for (let k = 0; k < count; k++) {
-    const angle = (k / count) * Math.PI * 2 + Math.random() * 0.4;
-    const speed = config.speedRange[0]
-      + Math.random() * Math.max(0, config.speedRange[1] - config.speedRange[0]);
+    const angle = (k / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+    const offsetR = baseR + (Math.random() - 0.5) * halfBand * 2;
+    const r2 = offsetR * offsetR;
+    const orbitV = Math.sqrt((PLANET_G * star.mass * offsetR) / (r2 + PLANET_SOFTENING));
+    // All prograde — keeps angular momentum aligned so head-on collisions
+    // don't sap the system's rotation and dump everything into the star.
+    const tangentX = -Math.sin(angle);
+    const tangentY = Math.cos(angle);
+    const radialJitter = (Math.random() - 0.5) * 4;
+    const vmag = orbitV * (0.94 + Math.random() * 0.08);
     const mass = config.massBase + Math.random() * config.massVariance;
-    const offset = originalRadius * 1.4;
     planetBodies.push({
       type: "asteroid",
-      x: cx + Math.cos(angle) * offset,
-      y: cy + Math.sin(angle) * offset,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
+      x: cx + Math.cos(angle) * offsetR,
+      y: cy + Math.sin(angle) * offsetR,
+      vx: tangentX * vmag + Math.cos(angle) * radialJitter,
+      vy: tangentY * vmag + Math.sin(angle) * radialJitter,
       mass,
       radius: planetRadiusFor("asteroid", mass),
       hue: planetHueFor("asteroid"),
@@ -2166,6 +2320,8 @@ function triggerPlanetSupernova(star) {
   }
   planetSupernovaFlashes.push({ x: cx, y: cy, t: 0, life: 0.9, radius: originalRadius });
   planetSupernovas++;
+  // Hand the camera the cue to dolly in on the new system.
+  startPlanetCameraZoom(cx, cy, 1.6);
   return true;
 }
 
@@ -2227,6 +2383,13 @@ function drawPlanets() {
   ctx.fillStyle = "rgba(3, 8, 20, 0.22)";
   ctx.fillRect(0, 0, w, h);
 
+  // Apply the camera transform: world (planetCamX, planetCamY) maps to the
+  // canvas centre, scaled by planetCamZoom.
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.scale(planetCamZoom, planetCamZoom);
+  ctx.translate(-planetCamX, -planetCamY);
+
   for (const body of planetBodies) {
     if (body.trail.length > 1) {
       ctx.beginPath();
@@ -2235,7 +2398,7 @@ function drawPlanets() {
         ctx.lineTo(body.trail[i].x, body.trail[i].y);
       }
       ctx.strokeStyle = body.trailColor;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.5 / planetCamZoom;
       ctx.stroke();
     }
 
@@ -2253,6 +2416,7 @@ function drawPlanets() {
   }
 
   drawSupernovaFlashes(ctx);
+  ctx.restore();
 }
 
 function drawSupernovaFlashes(ctx) {
