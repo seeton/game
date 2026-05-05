@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
+.DS_Store
 local/*
 !local/README.md
 !local/ssl/
@@ -8,3 +9,4 @@ local/ssl/*
 publish/runtime/sessions/*.json
 publish/runtime/binary_sessions/*.json
 publish.zip
+scripts/_trace_planet.mjs
