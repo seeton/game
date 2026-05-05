@@ -17,7 +17,7 @@ RewriteRule ^(minesweeper|binary|planet|management|fishing|solitaire)/?$ /index.
 DirectoryIndex index.html app.xcg
 
 <IfModule mod_headers.c>
-  Header always setifempty Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-tgYHzF47b8yBol70Z4bTIkDVsojhKxUq+nAFxrsdY/Q='; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+  Header always setifempty Content-Security-Policy "default-src 'self'; script-src 'self' https: 'unsafe-inline' 'sha256-tgYHzF47b8yBol70Z4bTIkDVsojhKxUq+nAFxrsdY/Q='; style-src 'self' https: 'unsafe-inline'; font-src 'self' https: data:; connect-src 'self' https:; img-src 'self' https: data: blob:; frame-src https:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
   Header always setifempty Referrer-Policy "strict-origin-when-cross-origin"
   Header always setifempty X-Content-Type-Options "nosniff"
   Header always setifempty X-Frame-Options "SAMEORIGIN"
