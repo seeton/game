@@ -931,8 +931,15 @@ let solitaireTimerInterval = null;
 
 applyTranslations();
 syncDifficultyButtons();
-renderGameShell();
-maybeAutoLoadSelectedGame();
+// Defer the initial render until the rest of the module has finished
+// executing. renderGameShell() can call into renderPlanetToolbar, which
+// reaches for planet sim constants declared later in this file. If we
+// rendered synchronously here, those `const`s would still be in the
+// temporal dead zone and the call would throw, which left clicks dead.
+queueMicrotask(() => {
+  renderGameShell();
+  maybeAutoLoadSelectedGame();
+});
 initLogoScene();
 
 languageButtons.forEach((button) => {

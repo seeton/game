@@ -60,7 +60,7 @@ class AppCoreTests(unittest.TestCase):
         status, _, body = self.run_application("/")
         self.assertTrue(status.startswith("200"))
         self.assertIn(b"/static/styles.css", body)
-        self.assertIn(b"/static/app.js?v=20260505b", body)
+        self.assertIn(b"/static/app.js?v=20260505c", body)
         self.assertIn(b"GAMES", body)
 
     def test_per_game_paths_serve_index_html(self) -> None:
