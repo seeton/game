@@ -20,7 +20,7 @@ const PLANET_PHASE_VICTORY = 4;
 const INFLATION_MOTE_TARGET = 18;
 const MOTE_TO_GAS_MASS = 30;
 const GAS_TO_STAR_MASS = 80;
-const STARS_PHASE_TARGET = 2;
+const STARS_PHASE_TARGET = 1;
 const SUPERNOVA_TARGET = 1;
 const ASTEROID_HABITABLE_BONUS = 1.6;
 const LIFE_DURATION_TARGET = 5;
@@ -113,10 +113,11 @@ function createPlanetBody(state, x, y, typeKey) {
       vy = Math.sin(angle) * orbitSpeed;
     }
   } else if (type === "mote") {
-    const baseAngle = r > 0.5 ? Math.atan2(dy, dx) : rng() * Math.PI * 2;
-    const angle = baseAngle + (rng() - 0.5) * 1.6;
-    vx = Math.cos(angle) * speed;
-    vy = Math.sin(angle) * speed;
+    const baseAngle = r > 0.5 ? Math.atan2(dy, dx) + Math.PI : rng() * Math.PI * 2;
+    const angle = baseAngle + (rng() - 0.5) * 0.8;
+    const driftSpeed = speed * 0.6;
+    vx = Math.cos(angle) * driftSpeed;
+    vy = Math.sin(angle) * driftSpeed;
   } else if (type === "asteroid") {
     const angle = rng() * Math.PI * 2;
     vx = Math.cos(angle) * speed;
@@ -297,10 +298,14 @@ function maybeAdvancePhase(state) {
 function detonateOneStar(state) {
   const star = state.bodies.find((b) => b.type === "star");
   if (!star) return false;
-  const idx = state.bodies.indexOf(star);
-  state.bodies.splice(idx, 1);
   const cx = star.x;
   const cy = star.y;
+  const originalRadius = star.radius;
+  const remnantMass = Math.max(140, Math.min(280, star.mass * 0.45));
+  star.mass = remnantMass;
+  star.radius = planetRadiusFor("star", remnantMass);
+  star.vx *= 0.4;
+  star.vy *= 0.4;
   const count = 7 + Math.floor(state.rng() * 4);
   const config = PLANET_TYPES.asteroid;
   for (let k = 0; k < count; k++) {
@@ -308,7 +313,7 @@ function detonateOneStar(state) {
     const speed = config.speedRange[0]
       + state.rng() * Math.max(0, config.speedRange[1] - config.speedRange[0]);
     const mass = config.massBase + state.rng() * config.massVariance;
-    const offset = star.radius * 1.1;
+    const offset = originalRadius * 1.4;
     state.bodies.push({
       type: "asteroid",
       x: cx + Math.cos(angle) * offset,
@@ -404,8 +409,8 @@ function runScenario(seed, opts = {}) {
     phase: PLANET_PHASE_INFLATION,
     motesPlaced: 0,
     supernovas: 0,
-    canvasW: 600,
-    canvasH: 400,
+    canvasW: opts.canvasW || 600,
+    canvasH: opts.canvasH || 400,
     rng: makeRng(seed),
   };
 
@@ -432,46 +437,9 @@ function runScenario(seed, opts = {}) {
     // user see the swollen stars; here we just wait briefly).
     if (state.phase === PLANET_PHASE_SUPERNOVA) {
       // Choose to wait a few frames for stars to settle, then click the smaller one.
-      if (state.supernovas === 0 && state.bodies.filter((b) => b.type === "star").length >= 2) {
-        // Pick the more central star to detonate so the surviving one stays
-        // close to the canvas center where we will place a planet.
-        const cx = state.canvasW / 2;
-        const cy = state.canvasH / 2;
-        const stars = state.bodies.filter((b) => b.type === "star");
-        stars.sort((a, b) => {
-          const da = (a.x - cx) ** 2 + (a.y - cy) ** 2;
-          const db = (b.x - cx) ** 2 + (b.y - cy) ** 2;
-          return db - da; // farther one first → detonate the further-out one
-        });
-        const target = stars[0];
-        const targetIdx = state.bodies.indexOf(target);
-        if (targetIdx >= 0) {
-          // Inline detonate for the chosen star.
-          const star = state.bodies.splice(targetIdx, 1)[0];
-          const count = 7 + Math.floor(state.rng() * 4);
-          const config = PLANET_TYPES.asteroid;
-          for (let k = 0; k < count; k++) {
-            const angle = (k / count) * Math.PI * 2 + state.rng() * 0.4;
-            const speed = config.speedRange[0]
-              + state.rng() * Math.max(0, config.speedRange[1] - config.speedRange[0]);
-            const mass = config.massBase + state.rng() * config.massVariance;
-            const offset = star.radius * 1.1;
-            state.bodies.push({
-              type: "asteroid",
-              x: star.x + Math.cos(angle) * offset,
-              y: star.y + Math.sin(angle) * offset,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              mass,
-              radius: planetRadiusFor("asteroid", mass),
-              state: null,
-              habitableTime: 0,
-              aliveTime: 0,
-            });
-          }
-          state.supernovas++;
-          maybeAdvancePhase(state);
-        }
+      if (state.supernovas === 0 && state.bodies.filter((b) => b.type === "star").length >= 1) {
+        detonateOneStar(state);
+        maybeAdvancePhase(state);
       }
     }
 
@@ -568,11 +536,118 @@ console.log("=== verbose trace seed=1 ===");
 runScenario(1, { verbose: true });
 console.log("=== end verbose trace ===\n");
 
+// Naive-user strategy: clicks scattered uniformly across the whole canvas
+// (i.e., no cluster strategy). This is what most first-time players do.
+function runNaiveScenario(seed, opts = {}) {
+  const state = {
+    bodies: [],
+    phase: PLANET_PHASE_INFLATION,
+    motesPlaced: 0,
+    supernovas: 0,
+    canvasW: opts.canvasW || 600,
+    canvasH: opts.canvasH || 400,
+    rng: makeRng(seed),
+  };
+  const rng = state.rng;
+  for (let i = 0; i < INFLATION_MOTE_TARGET; i++) {
+    const x = rng() * state.canvasW;
+    const y = rng() * state.canvasH;
+    state.bodies.push(createPlanetBody(state, x, y, "mote"));
+    state.motesPlaced++;
+    maybeAdvancePhase(state);
+  }
+  const dt = 1 / 60;
+  const maxFrames = 60 * 90;
+  let phaseHistory = [state.phase];
+  for (let frame = 0; frame < maxFrames; frame++) {
+    stepPlanets(state, dt);
+    if (state.phase === PLANET_PHASE_STARS && (frame % 60) === 30) {
+      const starCount = state.bodies.filter((b) => b.type === "star").length;
+      const moteCount = state.bodies.filter((b) => b.type === "mote" || b.type === "gas").length;
+      if (starCount < STARS_PHASE_TARGET && moteCount < 4) {
+        for (let i = 0; i < 6; i++) {
+          const x = rng() * state.canvasW;
+          const y = rng() * state.canvasH;
+          state.bodies.push(createPlanetBody(state, x, y, "mote"));
+          state.motesPlaced++;
+        }
+      }
+    }
+    if (state.phase === PLANET_PHASE_SUPERNOVA && state.supernovas === 0
+        && state.bodies.filter((b) => b.type === "star").length >= 1) {
+      detonateOneStar(state);
+      maybeAdvancePhase(state);
+    }
+    if (state.phase === PLANET_PHASE_PLANETS) {
+      const hasPlanet = state.bodies.some((b) => b.type === "planet");
+      if (!hasPlanet || (frame % 240 === 0 && !state.bodies.some(
+          (b) => b.type === "planet" && (b.state === "alive" || b.state === "habitable")))) {
+        state.bodies = state.bodies.filter((b) => b.type !== "planet");
+        const star = state.bodies.find((b) => b.type === "star");
+        if (star) {
+          const r = 16 + rng() * 8;
+          const ang = rng() * Math.PI * 2;
+          state.bodies.push(createPlanetBody(state,
+            star.x + Math.cos(ang) * r,
+            star.y + Math.sin(ang) * r,
+            "planet"));
+        }
+      }
+    }
+    if (state.phase !== phaseHistory[phaseHistory.length - 1]) phaseHistory.push(state.phase);
+    if (state.phase === PLANET_PHASE_VICTORY) return { cleared: true, frames: frame, seconds: frame * dt, phaseHistory };
+  }
+  return { cleared: false, frames: maxFrames, seconds: maxFrames * dt, phaseHistory, state };
+}
+
+// First, naive-user runs at common canvas sizes
+console.log("=== naive random-click strategy ===");
+for (const size of [{ w: 600, h: 400 }, { w: 900, h: 400 }, { w: 1200, h: 400 }]) {
+  let n = 0;
+  let stuckPhases = {};
+  for (const seed of [1, 7, 19, 42, 101, 256, 1024, 9001, 12345, 65535]) {
+    const r = runNaiveScenario(seed, size);
+    if (r.cleared) n++;
+    else stuckPhases[r.phaseHistory[r.phaseHistory.length - 1]] = (stuckPhases[r.phaseHistory[r.phaseHistory.length - 1]] || 0) + 1;
+  }
+  console.log(`  ${size.w}x${size.h}: cleared ${n}/10  stuck=${JSON.stringify(stuckPhases)}`);
+}
+console.log("=== end naive ===\n");
+
+// Vary the canvas size like real desktops/tablets/phones do.
+const canvasSizes = [
+  { w: 600,  h: 400, label: "600x400 (narrow)" },
+  { w: 900,  h: 400, label: "900x400 (desktop)" },
+  { w: 1200, h: 400, label: "1200x400 (wide desktop)" },
+];
+
 const seeds = [1, 7, 19, 42, 101, 256, 1024, 9001, 12345, 65535];
 let cleared = 0;
 let totalSeconds = 0;
 const failures = [];
-for (const seed of seeds) {
+for (const size of canvasSizes) {
+  console.log(`\n=== canvas ${size.label} ===`);
+  for (const seed of seeds) {
+    const result = runScenario(seed, { canvasW: size.w, canvasH: size.h });
+    if (result.cleared) {
+      cleared++;
+      totalSeconds += result.seconds;
+    } else {
+      failures.push({ size: size.label, seed, history: result.phaseHistory });
+      console.log(`  seed=${seed}: NOT CLEARED, history=${JSON.stringify(result.phaseHistory)}`);
+    }
+  }
+}
+const totalRuns = canvasSizes.length * seeds.length;
+console.log(`\nCleared ${cleared}/${totalRuns} runs across ${canvasSizes.length} sizes`);
+if (cleared > 0) console.log(`Average clear time: ${(totalSeconds / cleared).toFixed(1)}s`);
+if (failures.length === totalRuns) { console.error("All scenarios failed."); process.exit(1); }
+if (cleared >= Math.ceil(totalRuns * 0.7)) { console.log("PASS"); process.exit(0); }
+else { console.log("WARN — not reliably clearable"); process.exit(2); }
+
+// Below: the original per-size summary (kept disabled).
+const _origSeeds = [];
+for (const seed of _origSeeds) {
   const result = runScenario(seed);
   if (result.cleared) {
     cleared++;

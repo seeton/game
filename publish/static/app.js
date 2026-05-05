@@ -1711,7 +1711,7 @@ const PLANET_PHASE_VICTORY = 4;
 const INFLATION_MOTE_TARGET = 18;
 const MOTE_TO_GAS_MASS = 30;
 const GAS_TO_STAR_MASS = 80;
-const STARS_PHASE_TARGET = 2;
+const STARS_PHASE_TARGET = 1;
 const SUPERNOVA_TARGET = 1;
 const ASTEROID_HABITABLE_BONUS = 1.6;
 const LIFE_DURATION_TARGET = 5;
@@ -1875,10 +1875,14 @@ function createPlanetBody(x, y, typeKey) {
       vy = Math.sin(angle) * orbitSpeed;
     }
   } else if (type === "mote") {
-    const baseAngle = r > 0.5 ? Math.atan2(dy, dx) : Math.random() * Math.PI * 2;
-    const angle = baseAngle + (Math.random() - 0.5) * 1.6;
-    vx = Math.cos(angle) * speed;
-    vy = Math.sin(angle) * speed;
+    // Drift each mote gently toward the canvas center so scattered clicks
+    // converge into a clump that can collapse into a star (gravitational
+    // instability). Without this, motes fly outward and never coalesce.
+    const baseAngle = r > 0.5 ? Math.atan2(dy, dx) + Math.PI : Math.random() * Math.PI * 2;
+    const angle = baseAngle + (Math.random() - 0.5) * 0.8;
+    const driftSpeed = speed * 0.6;
+    vx = Math.cos(angle) * driftSpeed;
+    vy = Math.sin(angle) * driftSpeed;
   } else if (type === "asteroid") {
     const angle = Math.random() * Math.PI * 2;
     vx = Math.cos(angle) * speed;
@@ -2116,7 +2120,16 @@ function triggerPlanetSupernova(star) {
   if (idx < 0) return false;
   const cx = star.x;
   const cy = star.y;
-  planetBodies.splice(idx, 1);
+  // Supernova leaves a remnant (white-dwarf / neutron-star-style core) so
+  // there is always a sun for the planets phase. The original mass is
+  // partially shed as asteroids carrying heavy elements.
+  const originalRadius = star.radius;
+  const remnantMass = Math.max(140, Math.min(280, star.mass * 0.45));
+  star.mass = remnantMass;
+  star.radius = planetRadiusFor("star", remnantMass);
+  star.vx *= 0.4;
+  star.vy *= 0.4;
+  if (star.trail) star.trail.length = 0;
   const count = 7 + Math.floor(Math.random() * 4);
   const config = PLANET_TYPES.asteroid;
   for (let k = 0; k < count; k++) {
@@ -2124,7 +2137,7 @@ function triggerPlanetSupernova(star) {
     const speed = config.speedRange[0]
       + Math.random() * Math.max(0, config.speedRange[1] - config.speedRange[0]);
     const mass = config.massBase + Math.random() * config.massVariance;
-    const offset = star.radius * 1.1;
+    const offset = originalRadius * 1.4;
     planetBodies.push({
       type: "asteroid",
       x: cx + Math.cos(angle) * offset,
@@ -2144,7 +2157,7 @@ function triggerPlanetSupernova(star) {
       flash: 0,
     });
   }
-  planetSupernovaFlashes.push({ x: cx, y: cy, t: 0, life: 0.9, radius: star.radius });
+  planetSupernovaFlashes.push({ x: cx, y: cy, t: 0, life: 0.9, radius: originalRadius });
   planetSupernovas++;
   return true;
 }
