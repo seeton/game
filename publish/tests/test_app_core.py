@@ -60,8 +60,8 @@ class AppCoreTests(unittest.TestCase):
         status, _, body = self.run_application("/")
         self.assertTrue(status.startswith("200"))
         self.assertIn(b"/static/styles.css", body)
-        self.assertIn(b"/static/app.js?v=20260503d", body)
-        self.assertIn("遊ぶゲームを選ぶ。".encode("utf-8"), body)
+        self.assertIn(b"/static/app.js?v=20260505a", body)
+        self.assertIn(b"GAMES", body)
 
     def test_per_game_paths_serve_index_html(self) -> None:
         for game in ("minesweeper", "binary", "planet", "management", "fishing", "solitaire"):

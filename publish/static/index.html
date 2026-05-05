@@ -16,7 +16,7 @@
       }
     }
   </script>
-<link href="/static/styles.css?v=20260503d" rel="stylesheet"/>
+<link href="/static/styles.css?v=20260505a" rel="stylesheet"/>
 
 </head>
 <body>
@@ -30,8 +30,6 @@
 <nav aria-label="グローバルナビゲーション" class="site-nav" data-i18n="navAria" data-i18n-attr="aria-label">
 <a data-i18n="navPlay" href="#play">Games</a>
 <a data-i18n="navMotion" href="#motion">Motion</a>
-<a data-i18n="navSignal" href="#signal">Signal</a>
-<a data-i18n="navLaunch" href="#launch">Launch</a>
 </nav>
 <div aria-label="言語切替" class="language-switch" data-i18n="languageGroupLabel" data-i18n-attr="aria-label" role="group">
 <span class="language-label" data-i18n="languageLabel">LANGUAGE</span>
@@ -44,8 +42,7 @@
 <section class="game-hub" id="play">
 <div class="section-head play-head">
 <p class="panel-label" data-i18n="playSectionLabel">GAME SHELF</p>
-<h1 data-i18n="playSectionTitle">遊ぶゲームを選ぶ。</h1>
-<p class="section-copy" data-i18n="playSectionBody">いま遊べるものと、次に並べる予定のものを同じ棚に置いています。</p>
+<h1 data-i18n="playSectionTitle">GAMES</h1>
 </div>
 <div aria-label="ゲーム選択棚" class="game-library" data-i18n="gameLibraryAria" data-i18n-attr="aria-label">
 <button aria-pressed="true" class="game-select-card is-selected" data-game-select="minesweeper" type="button">
@@ -223,6 +220,14 @@
 <div class="toolbar-row">
 <div class="game-stats">
 <div class="metric-card">
+<span class="metric-label" data-i18n="planetPhaseLabel">段階</span>
+<strong id="planet-phase-text">—</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="planetProgressLabel">進行</span>
+<strong id="planet-progress-text">—</strong>
+</div>
+<div class="metric-card">
 <span class="metric-label" data-i18n="planetBodiesLabel">天体数</span>
 <strong id="planet-body-count">0</strong>
 </div>
@@ -230,28 +235,15 @@
 <span class="metric-label" data-i18n="planetLifeLabel">生命</span>
 <strong id="planet-life-count">0</strong>
 </div>
-<div class="metric-card">
-<span class="metric-label" data-i18n="planetStateLabel">状態</span>
-<strong id="planet-state-text">—</strong>
-</div>
-</div>
-<div class="planet-type-cluster">
-<span class="tool-label" data-i18n="planetTypeLabel">PLACE</span>
-<div class="difficulty-picker planet-type-picker">
-<button class="active" data-planet-type="star" data-i18n="planetTypeStar" type="button">恒星</button>
-<button data-planet-type="planet" data-i18n="planetTypePlanet" type="button">惑星</button>
-<button data-planet-type="asteroid" data-i18n="planetTypeAsteroid" type="button">小惑星</button>
-</div>
 </div>
 </div>
 <div class="toolbar-row toolbar-notes">
 <div class="control-copy">
-<p data-i18n="planetControlAdd">設置タイプを選んでクリックまたはタップで配置。</p>
-<p data-i18n="planetControlNote">恒星の周りに惑星を置くと、距離で凍結・水・生命・灼熱と姿が変わります。</p>
+<p data-i18n="planetControlNote">創世記のシナリオ。インフレ → 恒星 → 超新星 → 惑星 と進めて地球を誕生させよう。</p>
 </div>
 <div class="game-actions">
 <button class="button button-ghost" data-i18n="planetPause" id="planet-pause-button" type="button">一時停止</button>
-<button class="button button-ghost" data-i18n="planetReset" id="planet-reset-button" type="button">リセット</button>
+<button class="button button-ghost" data-i18n="planetReset" id="planet-reset-button" type="button">やり直し</button>
 </div>
 </div>
 </div>
@@ -325,6 +317,16 @@
 <div aria-label="マインスイーパーの盤面" aria-live="polite" class="board" data-i18n="gameBoardAria" data-i18n-attr="aria-label" id="board"></div>
 </div>
 <section class="binary-panel" hidden="" id="binary-panel">
+<div class="binary-objective" data-status="idle" id="binary-objective">
+<div class="binary-objective-head">
+<span class="binary-objective-label" data-i18n="binaryObjectiveLabel" id="binary-objective-label">勝利条件</span>
+<strong class="binary-objective-target" id="binary-objective-target">残高を3倍 (¥300,000) にする</strong>
+</div>
+<div class="binary-objective-progress-track">
+<div class="binary-objective-progress-fill" id="binary-objective-fill"></div>
+</div>
+<div class="binary-objective-detail" id="binary-objective-detail">現在 ¥100,000 / 残り ¥200,000</div>
+</div>
 <div class="binary-trade-grid">
 <article class="binary-card" hidden="" id="binary-pair-card">
 <p class="tool-label" data-i18n="binaryPairLabel">PAIR</p>
@@ -447,8 +449,29 @@
 </article>
 </section>
 <section class="planet-panel" hidden="" id="planet-panel">
-<p class="planet-hint" data-i18n="planetHint" id="planet-hint">タイプを選んでキャンバスをクリック。最大20個まで。</p>
+<ol aria-label="宇宙史タイムライン" class="planet-timeline" data-i18n="planetTimelineAria" data-i18n-attr="aria-label" id="planet-timeline">
+<li class="planet-timeline-step is-active" data-step="0"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep0">インフレ</span></li>
+<li class="planet-timeline-step" data-step="1"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep1">星と銀河</span></li>
+<li class="planet-timeline-step" data-step="2"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep2">超新星</span></li>
+<li class="planet-timeline-step" data-step="3"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep3">太陽系</span></li>
+<li class="planet-timeline-step" data-step="4"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep4">地球</span></li>
+</ol>
+<div class="planet-era">
+<span class="planet-era-clock" id="planet-era-clock">10⁻³⁶ 秒</span>
+<span class="planet-era-name" id="planet-era-name">インフレーションと素粒子</span>
+</div>
+<p class="planet-hint" data-i18n="planetHintInflation" id="planet-hint">クリックで光の粒を撒いて宇宙の種をつくる。</p>
+<div class="planet-stage">
 <canvas class="planet-canvas" id="planet-canvas"></canvas>
+<div class="planet-overlay" hidden="" id="planet-overlay">
+<strong id="planet-overlay-title"></strong>
+<span id="planet-overlay-body"></span>
+</div>
+<div class="planet-victory" hidden="" id="planet-victory">
+<strong data-i18n="planetVictoryTitle">地球誕生</strong>
+<span data-i18n="planetVictorySub">生命が宿る惑星が安定しました。</span>
+</div>
+</div>
 </section>
 <section class="mgmt-panel" hidden="" id="mgmt-panel">
 <div class="mgmt-trade-grid">
@@ -502,52 +525,6 @@
 </div>
 </div>
 </section>
-<section class="signal-grid" id="signal">
-<div class="section-head">
-<p class="panel-label" data-i18n="signalSectionLabel">SIGNAL</p>
-<h2 data-i18n="signalSectionTitle">何が遊べるかを先に見せる。</h2>
-<p class="section-copy" data-i18n="signalSectionBody">上から棚、プレイ画面、ロゴの順で見えるので、触ってすぐ遊べる構成です。</p>
-</div>
-<article class="signal-card">
-<p class="panel-label" data-i18n="signalCard1Label">SHELF</p>
-<h3 data-i18n="signalCard1Title">複数ゲームを最初から並べる</h3>
-<p data-i18n="signalCard1Body">プレイ中のものと、次に追加するものを同じ棚で見せます。</p>
-</article>
-<article class="signal-card">
-<p class="panel-label" data-i18n="signalCard2Label">LOAD</p>
-<h3 data-i18n="signalCard2Title">選んだ時点で準備を始める</h3>
-<p data-i18n="signalCard2Body">サムネイルを押したら、その場で読み込みに入り、待ち時間を表示します。</p>
-</article>
-<article class="signal-card">
-<p class="panel-label" data-i18n="signalCard3Label">FX</p>
-<h3 data-i18n="signalCard3Title">通貨連動の枠も同じ場所で遊ぶ</h3>
-<p data-i18n="signalCard3Body">バイナリシミュレーションはサーバー側でレートを取得して状態を持ちます。</p>
-</article>
-</section>
-<section class="launch-panel" id="launch">
-<div class="launch-copy">
-<p class="panel-label" data-i18n="launchLabel">LAUNCH</p>
-<h2 data-i18n="launchTitle">棚を増やしながらホームを育てる。</h2>
-<p data-i18n="launchBody">いまはマインスイーパーとバイナリが動き、他のゲームは次の追加候補として並べています。</p>
-</div>
-<ol class="flow-list">
-<li>
-<strong>01</strong>
-<span data-i18n="flow1Label">Choose</span>
-<p data-i18n="flow1Body">棚からゲームを選ぶと、その場で準備が始まります。</p>
-</li>
-<li>
-<strong>02</strong>
-<span data-i18n="flow2Label">Watch</span>
-<p data-i18n="flow2Body">読み込み中か、まだ未実装かを同じ画面で判断できます。</p>
-</li>
-<li>
-<strong>03</strong>
-<span data-i18n="flow3Label">Play</span>
-<p data-i18n="flow3Body">プレイ画面は上部に説明と操作、下部にゲーム本体を置いています。</p>
-</li>
-</ol>
-</section>
 </main>
 <footer class="site-footer">
 <div>
@@ -556,6 +533,7 @@
 </div>
 <a class="footer-link" data-i18n="footerLink" href="#top">先頭へ戻る</a></footer>
 </div>
-<script src="/static/app.js?v=20260503d" type="module"></script>
+<script src="/static/app.js?v=20260505a" type="module"></script>
+<script src="https://cache1.value-domain.com/xa.j?site=setn.s323.xrea.com" type="text/javascript"></script>
 </body>
 </html>
