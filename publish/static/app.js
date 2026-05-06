@@ -1766,7 +1766,7 @@ const GAS_TO_STAR_MASS = 80;
 const STARS_PHASE_TARGET = 1;
 const SUPERNOVA_TARGET = 1;
 const ASTEROID_HABITABLE_BONUS = 1.6;
-const ASTEROID_TO_PLANET_MASS = 10;
+const ASTEROID_TO_PLANET_MASS = 7;
 const LIFE_DURATION_TARGET = 5;
 
 // Planet evolution stages. Each click on a planet during the planets phase
@@ -1811,10 +1811,10 @@ const PLANET_TYPES = {
     trailColor: "rgba(120, 190, 255, 0.22)",
   },
   asteroid: {
-    massBase: 1.6,
-    massVariance: 1.4,
+    massBase: 3,
+    massVariance: 2,
     radiusFactor: 4.0,
-    minRadius: 3,
+    minRadius: 4,
     speedRange: [40, 70],
     trailColor: "rgba(200, 170, 130, 0.22)",
   },
@@ -2445,10 +2445,12 @@ function triggerPlanetSupernova(star) {
   star.y = cy;
   star.vx = 0;
   star.vy = 0;
-  // The detonated star is "our" sun. Any other stars that happened to form
-  // are treated as distant siblings and dropped from the simulation so they
-  // don't perturb the orbits in our solar system.
-  planetBodies = planetBodies.filter((b) => b === star || b.type !== "star");
+  // The detonated star is "our" sun. Drop everything else from the
+  // pre-supernova era — sibling stars (galactic neighbours), leftover
+  // motes/gas (which would otherwise re-collapse into a second star), and
+  // earlier asteroid debris. The clean slate is then seeded with a fresh
+  // dust ring below.
+  planetBodies = planetBodies.filter((b) => b === star);
 
   // Supernova leaves a remnant (white-dwarf / neutron-star-style core) so
   // there is always a sun for the planets phase. The remnant is plumped up
@@ -2529,6 +2531,38 @@ function advancePlanetStage(planet) {
     planet.stageTime = 0;
     planet.flash = 0.6;
     spawnRainBurst(planet);
+    // The atmosphere has cooled and the orbit has settled by the time water
+    // forms oceans. Re-circularise around the dominant star so the planet
+    // doesn't oscillate in and out of the habitable band — this is the
+    // moment life gets a stable cradle.
+    let bestStar = null;
+    let bestD2 = Infinity;
+    for (const body of planetBodies) {
+      if (body.type !== "star") continue;
+      const dx = planet.x - body.x;
+      const dy = planet.y - body.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestD2) {
+        bestD2 = d2;
+        bestStar = body;
+      }
+    }
+    if (bestStar) {
+      const dx = planet.x - bestStar.x;
+      const dy = planet.y - bestStar.y;
+      const dr = Math.hypot(dx, dy);
+      if (dr > 1) {
+        const orbitV = Math.sqrt(
+          (PLANET_G * bestStar.mass * dr) / (dr * dr + PLANET_SOFTENING),
+        );
+        const tx = -dy / dr;
+        const ty = dx / dr;
+        const tangentDot = planet.vx * tx + planet.vy * ty;
+        const spin = tangentDot >= 0 ? 1 : -1;
+        planet.vx = bestStar.vx + tx * orbitV * spin;
+        planet.vy = bestStar.vy + ty * orbitV * spin;
+      }
+    }
     return true;
   }
   return false;
