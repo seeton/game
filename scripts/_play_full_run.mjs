@@ -23,6 +23,14 @@ const rect = await canvas.evaluate((el) => {
 });
 console.log(`canvas rect: ${rect.w}x${rect.h}`);
 
+// Inject a tiny debug helper into the page so we can read planet state.
+await page.addInitScript(() => {
+  // Wait until app.js has populated module-level globals on window via patched
+  // setters. We can't reach into closures, so this script does nothing on its
+  // own — we just rely on toolbar state. This stub keeps a hook open for
+  // future diagnostics.
+});
+
 async function snapshot() {
   return await page.evaluate(() => ({
     phase: document.getElementById("planet-phase-text")?.textContent,
@@ -55,16 +63,58 @@ for (let i = 0; i < 10 && !(await snapshot()).phase?.includes("惑星"); i++) {
 }
 console.log("after detonation click:", await snapshot());
 
-// Wire up an introspection helper from page-side. It walks the canvas
-// position via getImageData isn't useful — we need the JS state. Hack: dispatch
-// a synthetic event to read internal counts. Easiest: since app.js is a module
-// without exports, hook into any global the tests set. None exist, so we just
-// rely on the toolbar text. Provide more detail via a click no-op and read
-// trail data... actually let's just read the toolbar plus the chart-less.
+// Phase 3: watch the asteroid disk accrete over 8 seconds.
+for (let s = 1; s <= 8; s++) {
+  await page.waitForTimeout(1000);
+  const dbg = await page.evaluate(() => window.__planetDebug());
+  const counts = {};
+  let asteroidMassTotal = 0;
+  let maxAsteroidMass = 0;
+  for (const b of dbg.bodies) {
+    counts[b.type] = (counts[b.type] || 0) + 1;
+    if (b.type === "asteroid") {
+      asteroidMassTotal += b.mass;
+      if (b.mass > maxAsteroidMass) maxAsteroidMass = b.mass;
+    }
+  }
+  console.log(`t=+${s}s counts=${JSON.stringify(counts)} asteroidTotal=${asteroidMassTotal.toFixed(1)} maxAsteroidMass=${maxAsteroidMass.toFixed(1)}`);
+}
+const accretion = await page.evaluate(() => window.__planetDebug());
+const planetsAfter = accretion.bodies.filter((b) => b.type === "planet");
+console.log(`planets formed: ${planetsAfter.length}`);
+
+async function targetClickByStage(stageNeeded, label) {
+  // The planet is on a fast orbit, so its position has moved since the
+  // last debug read. Instead of remembering coordinates, locate any
+  // planet that is currently at the expected stage and click where it is
+  // right now.
+  const dbg = await page.evaluate(() => window.__planetDebug());
+  const candidate = dbg.bodies
+    .filter((b) => b.type === "planet" && (b.stage || 0) === stageNeeded)
+    .sort((a, b) => (a.stageTime || 0) - (b.stageTime || 0))[0];
+  if (!candidate) {
+    console.log(`${label}: no planet at stage ${stageNeeded}`);
+    return false;
+  }
+  const sx = (candidate.x - dbg.cam.x) * dbg.cam.zoom + dbg.canvas.w / 2;
+  const sy = (candidate.y - dbg.cam.y) * dbg.cam.zoom + dbg.canvas.h / 2;
+  console.log(`${label}: world=(${candidate.x.toFixed(0)},${candidate.y.toFixed(0)}) screen=(${sx.toFixed(0)},${sy.toFixed(0)}) stage=${candidate.stage} stageTime=${(candidate.stageTime || 0).toFixed(2)}`);
+  await canvas.click({ position: { x: sx, y: sy }, force: true });
+  return true;
+}
+
+if (planetsAfter.length === 0) {
+  console.log("no planets formed via accretion — skipping stage clicks");
+} else {
+  await targetClickByStage(0, "click1 (barren → volcanic)");
+  await page.waitForTimeout(2400);
+  await targetClickByStage(1, "click2 (volcanic → ocean)");
+}
+
 const start = Date.now();
 let lastSnap = null;
 let tick = 0;
-while (Date.now() - start < 30000) {
+while (Date.now() - start < 25000) {
   await page.waitForTimeout(2000);
   lastSnap = await snapshot();
   tick++;

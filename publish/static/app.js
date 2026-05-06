@@ -243,7 +243,7 @@ const COPY = {
     planetHintInflation: "クリックで真空のゆらぎを撒く。膨張する宇宙の中で素粒子が陽子や中性子になり、水素やヘリウムの原子核が生まれる。",
     planetHintStars: "重力で物質が集まり、最初の星が灯る瞬間を待つ。粒が足りなければ追加してもいい。",
     planetHintSupernova: "星の中心で炭素・酸素・鉄などの重い元素が作られた。膨らんだ恒星をクリックして超新星にし、重元素と小惑星を宇宙へばら撒こう。",
-    planetHintPlanets: "ガスとちりのディスクから原始惑星を置く。星の周りのハビタブルゾーンに留まり、小惑星が水と材料を運ぶと生命が芽生える。",
+    planetHintPlanets: "小惑星のディスクが集まって原始惑星になる。惑星をクリックで火山噴火を起こし、少し待ってからもう一度クリックで雨を降らせて海をつくる。海に達した惑星がハビタブルゾーンに留まると生命が芽生える。",
     planetHintVictory: "地球が誕生し、生命が安定して根付いた。クリア！",
     planetVictoryTitle: "地球誕生",
     planetVictorySub: "生命が宿る惑星が安定しました。",
@@ -269,8 +269,8 @@ const COPY = {
     planetIntroStarsBody: "宇宙 38 万年で電子が原子核と結びつき光がまっすぐ進めるようになる(CMB)。やがて密度のむらからガスが集まり最初の星が灯る。",
     planetIntroSupernovaTitle: "重い元素の誕生",
     planetIntroSupernovaBody: "星の中心で炭素・酸素・鉄・ケイ素が作られる。星が寿命を迎えて超新星爆発を起こすと、重元素が宇宙空間にばら撒かれる。",
-    planetIntroPlanetsTitle: "太陽系の誕生",
-    planetIntroPlanetsBody: "約 46 億年前、銀河の中でガスとちりが重力で集まり太陽が灯る。残ったディスクから微惑星が育ち、原始惑星に成長する。",
+    planetIntroPlanetsTitle: "太陽系の誕生と地球の進化",
+    planetIntroPlanetsBody: "微惑星から育った原始惑星をクリックして火山活動 → 雨 → 海と進めよう。ハビタブルゾーンの海洋惑星に生命が芽生える。",
     planetIntroVictoryTitle: "地球誕生",
     planetIntroVictoryBody: "重い元素と水が揃い、生命が根付いた惑星が安定した。",
     mgmtDayLabel: "日",
@@ -563,7 +563,7 @@ const COPY = {
     planetHintInflation: "Click to scatter quantum fluctuations. As the universe expands and cools, particles become protons, neutrons, and light nuclei (H, He).",
     planetHintStars: "Gravity pulls matter together. Wait for the first stars to ignite — add more motes if needed.",
     planetHintSupernova: "Heavy elements like carbon, oxygen, and iron are forged in stellar cores. Click a swollen star to detonate a supernova and scatter them.",
-    planetHintPlanets: "Place protoplanets in the gas-and-dust disk. If one settles in the habitable zone and absorbs asteroid impacts, life can take hold.",
+    planetHintPlanets: "The asteroid disk accretes into protoplanets. Click a planet to ignite volcanic outgassing, wait a moment, then click again to bring the rains and form an ocean. An ocean planet inside the habitable band births life.",
     planetHintVictory: "Earth has been born and life is stable. Cleared!",
     planetVictoryTitle: "Earth Born",
     planetVictorySub: "A living world has stabilized.",
@@ -589,8 +589,8 @@ const COPY = {
     planetIntroStarsBody: "At 380,000 years, electrons bind with nuclei into atoms — light streams free (the CMB). Later, density ripples pull gas together until the first stars ignite.",
     planetIntroSupernovaTitle: "Forging heavy elements",
     planetIntroSupernovaBody: "Stars fuse carbon, oxygen, iron, and silicon in their cores. When they die in supernovae, those elements scatter across the cosmos.",
-    planetIntroPlanetsTitle: "A solar system forms",
-    planetIntroPlanetsBody: "About 4.6 billion years ago, gas and dust collapse into the Sun and a disk. Grains stick into planetesimals, then grow into protoplanets.",
+    planetIntroPlanetsTitle: "Solar system & a young Earth",
+    planetIntroPlanetsBody: "Click a protoplanet for volcanic outgassing → wait → click again for rain. An ocean planet in the habitable band sparks life.",
     planetIntroVictoryTitle: "Earth is born",
     planetIntroVictoryBody: "With heavy elements and water in place, a stable, living world has emerged.",
     mgmtDayLabel: "DAY",
@@ -915,6 +915,7 @@ let binaryGame = null;
 let fishingState = createInitialFishingState();
 let planetBodies = [];
 let planetSupernovaFlashes = [];
+let planetParticles = [];
 let planetRunning = false;
 let planetAnimFrame = null;
 let planetCtx = null;
@@ -949,6 +950,29 @@ queueMicrotask(() => {
   maybeAutoLoadSelectedGame();
 });
 initLogoScene();
+
+// Debug hook for end-to-end probes (Playwright). Returns a snapshot of the
+// planet sim's current bodies and camera so a test can drive the new stage
+// machine without reading pixels. Intentionally read-only.
+window.__planetDebug = () => ({
+  phase: planetPhase,
+  motesPlaced: planetMotesPlaced,
+  supernovas: planetSupernovas,
+  cam: { x: planetCamX, y: planetCamY, zoom: planetCamZoom },
+  canvas: { w: planetCanvas.width, h: planetCanvas.height },
+  bodies: planetBodies.map((b) => ({
+    type: b.type,
+    x: b.x,
+    y: b.y,
+    mass: b.mass,
+    radius: b.radius,
+    state: b.state,
+    stage: b.stage,
+    stageTime: b.stageTime,
+    habitableTime: b.habitableTime,
+    aliveTime: b.aliveTime,
+  })),
+});
 
 languageButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -1071,7 +1095,13 @@ planetCanvas.addEventListener("click", (e) => {
       acted = triggerPlanetSupernova(star);
     }
   } else if (planetPhase === PLANET_PHASE_PLANETS) {
-    if (planetBodies.length < PLANET_MAX_BODIES) {
+    // Clicking on an existing planet advances its evolution stage:
+    //   barren → volcanic outgassing → ocean (eligible for life).
+    // Clicking empty space adds a new (barren) planet.
+    const existing = findPlanetBodyAt(x, y, "planet");
+    if (existing) {
+      acted = advancePlanetStage(existing);
+    } else if (planetBodies.length < PLANET_MAX_BODIES) {
       planetBodies.push(createPlanetBody(x, y, "planet"));
       acted = true;
     }
@@ -1100,6 +1130,7 @@ planetResetButton.addEventListener("click", () => {
   stopPlanetLoop();
   planetBodies = [];
   planetSupernovaFlashes = [];
+  planetParticles = [];
   planetPhase = PLANET_PHASE_INFLATION;
   planetMotesPlaced = 0;
   planetSupernovas = 0;
@@ -1738,6 +1769,13 @@ const ASTEROID_HABITABLE_BONUS = 1.6;
 const ASTEROID_TO_PLANET_MASS = 10;
 const LIFE_DURATION_TARGET = 5;
 
+// Planet evolution stages. Each click on a planet during the planets phase
+// advances it to the next stage; stage 2 is the prerequisite for life.
+const PLANET_STAGE_BARREN = 0;
+const PLANET_STAGE_VOLCANIC = 1;
+const PLANET_STAGE_OCEAN = 2;
+const PLANET_STAGE_COOLDOWN = 2.0; // seconds the player must wait between clicks
+
 const PLANET_TYPE_PRIORITY = { star: 5, planet: 4, gas: 3, asteroid: 2, mote: 1 };
 const PLANET_TYPES = {
   mote: {
@@ -1870,6 +1908,124 @@ function resizePlanetCanvas(force = false) {
   }
 }
 
+function spawnVolcanicBurst(planet) {
+  const n = 14 + Math.floor(Math.random() * 6);
+  for (let i = 0; i < n; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 35 + Math.random() * 35;
+    const r = planet.radius * (0.85 + Math.random() * 0.15);
+    planetParticles.push({
+      kind: "volcanic",
+      x: planet.x + Math.cos(angle) * r,
+      y: planet.y + Math.sin(angle) * r,
+      vx: planet.vx + Math.cos(angle) * speed,
+      vy: planet.vy + Math.sin(angle) * speed,
+      life: 1.1 + Math.random() * 0.7,
+      age: 0,
+      size: 1.4 + Math.random() * 1.6,
+    });
+  }
+}
+
+function spawnRainBurst(planet) {
+  const n = 24 + Math.floor(Math.random() * 8);
+  for (let i = 0; i < n; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = planet.radius * (1.8 + Math.random() * 0.7);
+    const fallSpeed = 18 + Math.random() * 14;
+    planetParticles.push({
+      kind: "rain",
+      x: planet.x + Math.cos(angle) * r,
+      y: planet.y + Math.sin(angle) * r,
+      vx: planet.vx - Math.cos(angle) * fallSpeed * 0.4,
+      vy: planet.vy - Math.sin(angle) * fallSpeed * 0.4,
+      life: r / Math.max(8, fallSpeed),
+      age: 0,
+      size: 0.9 + Math.random() * 0.8,
+      planet,
+    });
+  }
+}
+
+function stepPlanetParticles(dt) {
+  // Continuous emission: lava sparks while volcanic, rain drops while in
+  // ocean stage (until life takes hold so the rain visually stops).
+  for (const body of planetBodies) {
+    if (body.type !== "planet") continue;
+    if (body.stage === PLANET_STAGE_VOLCANIC) {
+      if (Math.random() < 0.55) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 22 + Math.random() * 28;
+        const r = body.radius * (0.85 + Math.random() * 0.15);
+        planetParticles.push({
+          kind: "volcanic",
+          x: body.x + Math.cos(angle) * r,
+          y: body.y + Math.sin(angle) * r,
+          vx: body.vx + Math.cos(angle) * speed,
+          vy: body.vy + Math.sin(angle) * speed,
+          life: 0.9 + Math.random() * 0.5,
+          age: 0,
+          size: 1.2 + Math.random() * 1.2,
+        });
+      }
+    } else if (body.stage === PLANET_STAGE_OCEAN && body.state !== "alive") {
+      if (Math.random() < 0.6) {
+        const angle = Math.random() * Math.PI * 2;
+        const startR = body.radius * (1.7 + Math.random() * 0.6);
+        const fallSpeed = 14 + Math.random() * 10;
+        planetParticles.push({
+          kind: "rain",
+          x: body.x + Math.cos(angle) * startR,
+          y: body.y + Math.sin(angle) * startR,
+          vx: body.vx - Math.cos(angle) * fallSpeed,
+          vy: body.vy - Math.sin(angle) * fallSpeed,
+          life: (startR - body.radius) / Math.max(8, fallSpeed),
+          age: 0,
+          size: 0.8 + Math.random() * 0.7,
+          planet: body,
+        });
+      }
+    }
+  }
+  for (const p of planetParticles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.age += dt;
+    if (p.kind === "volcanic") {
+      // gentle drag so sparks slow down before they fade
+      p.vx *= 0.985;
+      p.vy *= 0.985;
+    }
+  }
+  if (planetParticles.length > 800) {
+    // Cap to avoid runaway memory if the player camps on a stage.
+    planetParticles.splice(0, planetParticles.length - 800);
+  }
+  planetParticles = planetParticles.filter((p) => p.age < p.life);
+}
+
+function drawPlanetParticles(ctx) {
+  for (const p of planetParticles) {
+    const t = 1 - p.age / p.life;
+    if (t <= 0) continue;
+    if (p.kind === "volcanic") {
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2.2);
+      grad.addColorStop(0, `hsla(28, 100%, 70%, ${0.85 * t})`);
+      grad.addColorStop(0.6, `hsla(10, 100%, 55%, ${0.45 * t})`);
+      grad.addColorStop(1, "rgba(80, 20, 0, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.kind === "rain") {
+      ctx.fillStyle = `hsla(210, 100%, 80%, ${0.78 * t})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
 function planetRadiusFor(type, mass) {
   const config = PLANET_TYPES[type] || PLANET_TYPES.planet;
   const minR = config.minRadius != null ? config.minRadius : 3;
@@ -1966,6 +2122,8 @@ function createPlanetBody(x, y, typeKey) {
     seed: Math.random(),
     pulse: Math.random() * Math.PI * 2,
     state: type === "planet" ? "barren" : null,
+    stage: type === "planet" ? PLANET_STAGE_BARREN : 0,
+    stageTime: 0,
     habitableTime: 0,
     aliveTime: 0,
     trailColor: config.trailColor,
@@ -1983,6 +2141,7 @@ function startPlanetLoop() {
     const dt = Math.min((now - lastTime) / 1000, 0.033);
     lastTime = now;
     stepPlanets(dt);
+    stepPlanetParticles(dt);
     stepPlanetCamera(dt);
     drawPlanets();
     planetAnimFrame = requestAnimationFrame(loop);
@@ -2054,26 +2213,39 @@ function stepPlanets(dt) {
   for (let i = 0; i < planetBodies.length; i++) {
     const body = planetBodies[i];
     if (body.type !== "planet") continue;
-    const heat = computePlanetHeat(body, planetBodies);
+    body.stageTime = (body.stageTime || 0) + dt;
+    const stage = body.stage || 0;
     const wasAlive = body.state === "alive";
-    if (heat < PLANET_HEAT_FROZEN) {
-      body.state = "frozen";
-      body.habitableTime = Math.max(0, body.habitableTime - dt * 1.5);
-      // Once life took hold it doesn't vanish instantly when the planet
-      // briefly drifts colder/hotter — it just decays. This forgives
-      // mildly elliptical orbits.
-      body.aliveTime = Math.max(0, (body.aliveTime || 0) - dt * 0.5);
-    } else if (heat > PLANET_HEAT_HOT) {
-      body.state = "scorched";
-      body.habitableTime = Math.max(0, body.habitableTime - dt * 1.5);
-      body.aliveTime = Math.max(0, (body.aliveTime || 0) - dt * 0.5);
+    if (stage === PLANET_STAGE_BARREN) {
+      // No atmosphere yet. Player must trigger volcanism by clicking.
+      body.state = "barren";
+      body.habitableTime = 0;
+      body.aliveTime = 0;
+    } else if (stage === PLANET_STAGE_VOLCANIC) {
+      // Outgassing builds up the early atmosphere.
+      body.state = "volcanic";
+      body.habitableTime = 0;
+      body.aliveTime = 0;
     } else {
-      body.habitableTime += dt;
-      body.state = body.habitableTime >= PLANET_LIFE_DELAY ? "alive" : "habitable";
-      if (body.state === "alive") {
-        body.aliveTime = (body.aliveTime || 0) + dt;
-      } else if (!body.aliveTime) {
-        body.aliveTime = 0;
+      // Stage OCEAN: water has arrived, life can take hold if the orbit
+      // sits in the habitable band.
+      const heat = computePlanetHeat(body, planetBodies);
+      if (heat < PLANET_HEAT_FROZEN) {
+        body.state = "frozen";
+        body.habitableTime = Math.max(0, body.habitableTime - dt * 1.5);
+        body.aliveTime = Math.max(0, (body.aliveTime || 0) - dt * 0.5);
+      } else if (heat > PLANET_HEAT_HOT) {
+        body.state = "scorched";
+        body.habitableTime = Math.max(0, body.habitableTime - dt * 1.5);
+        body.aliveTime = Math.max(0, (body.aliveTime || 0) - dt * 0.5);
+      } else {
+        body.habitableTime += dt;
+        body.state = body.habitableTime >= PLANET_LIFE_DELAY ? "alive" : "habitable";
+        if (body.state === "alive") {
+          body.aliveTime = (body.aliveTime || 0) + dt;
+        } else if (!body.aliveTime) {
+          body.aliveTime = 0;
+        }
       }
     }
     if (wasAlive !== (body.state === "alive")) lifeChanged = true;
@@ -2117,6 +2289,12 @@ function stepPlanets(dt) {
       if (planetPhase >= PLANET_PHASE_PLANETS && (aIsStar || bIsStar)) {
         continue;
       }
+      // Sibling planets in the same system shouldn't physically merge on
+      // gameplay timescales — the merge just produces a wildly elliptical
+      // orbit that swings the survivor through the scorched/frozen bands.
+      if (planetPhase >= PLANET_PHASE_PLANETS && aIsPlanet && bIsPlanet) {
+        continue;
+      }
 
       const tm = a.mass + b.mass;
       a.x = (a.x * a.mass + b.x * b.mass) / tm;
@@ -2149,12 +2327,13 @@ function stepPlanets(dt) {
       a.trail = [];
       if (a.type === "planet") {
         a.state = a.state || "barren";
-        // A planet that grew from accreted dust+rock arrives carrying water
-        // and heavy elements already, so we hand it a habitable-time head
-        // start. If its orbit keeps it in the habitable band it can become
-        // alive within a couple of seconds rather than from zero.
-        if (promotedFromAsteroid && (a.habitableTime || 0) < PLANET_LIFE_DELAY * 0.7) {
-          a.habitableTime = PLANET_LIFE_DELAY * 0.7;
+        // Accreted protoplanets arrive barren — the player still has to
+        // trigger volcanism and rain to make them habitable.
+        if (promotedFromAsteroid) {
+          a.stage = PLANET_STAGE_BARREN;
+          a.stageTime = 0;
+          a.habitableTime = 0;
+          a.aliveTime = 0;
         }
         // Re-circularise the protoplanet's orbit around the dominant star.
         // Pure mass-weighted COM velocities from accretion are usually not
@@ -2266,12 +2445,18 @@ function triggerPlanetSupernova(star) {
   star.y = cy;
   star.vx = 0;
   star.vy = 0;
+  // The detonated star is "our" sun. Any other stars that happened to form
+  // are treated as distant siblings and dropped from the simulation so they
+  // don't perturb the orbits in our solar system.
+  planetBodies = planetBodies.filter((b) => b === star || b.type !== "star");
 
   // Supernova leaves a remnant (white-dwarf / neutron-star-style core) so
   // there is always a sun for the planets phase. The remnant is plumped up
-  // here so the habitable zone is wide enough for several distinct orbits.
+  // here so the habitable zone sits well outside the star's body — a much
+  // bigger sun pushes the habitable band well past the star's surface and
+  // leaves a clear visual gap between the star and the orbits.
   const originalRadius = star.radius;
-  const remnantMass = Math.max(520, Math.min(840, star.mass * 0.85 + 200));
+  const remnantMass = Math.max(1800, Math.min(2600, star.mass * 1.7 + 800));
   star.mass = remnantMass;
   star.radius = planetRadiusFor("star", remnantMass);
   if (star.trail) star.trail.length = 0;
@@ -2281,12 +2466,13 @@ function triggerPlanetSupernova(star) {
   // accrete into protoplanets without further user input.
   const config = PLANET_TYPES.asteroid;
   const count = 14 + Math.floor(Math.random() * 5);
-  // Centre the dust ring around the middle of the habitable band for the
-  // remnant star so accreted protoplanets land in a livable orbit.
+  // Bias the dust ring toward the outer half of the habitable band so the
+  // resulting protoplanets settle visibly far from the sun (Earth orbits
+  // in the cool-but-livable zone, not just outside the photosphere).
   const habInner = Math.sqrt(remnantMass / PLANET_HEAT_HOT);
   const habOuter = Math.sqrt(remnantMass / PLANET_HEAT_FROZEN);
-  const baseR = (habInner + habOuter) / 2;
-  const halfBand = (habOuter - habInner) * 0.4;
+  const baseR = habInner + (habOuter - habInner) * 0.65;
+  const halfBand = (habOuter - habInner) * 0.32;
   for (let k = 0; k < count; k++) {
     const angle = (k / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
     const offsetR = baseR + (Math.random() - 0.5) * halfBand * 2;
@@ -2320,9 +2506,32 @@ function triggerPlanetSupernova(star) {
   }
   planetSupernovaFlashes.push({ x: cx, y: cy, t: 0, life: 0.9, radius: originalRadius });
   planetSupernovas++;
-  // Hand the camera the cue to dolly in on the new system.
-  startPlanetCameraZoom(cx, cy, 1.6);
+  // Hand the camera the cue to dolly in on the new system. Tighter zoom
+  // makes the star and orbits look properly large without crowding them
+  // against each other.
+  startPlanetCameraZoom(cx, cy, 1.4);
   return true;
+}
+
+function advancePlanetStage(planet) {
+  if (!planet) return false;
+  const stage = planet.stage || 0;
+  const sinceStage = planet.stageTime || 0;
+  if (stage === PLANET_STAGE_BARREN) {
+    planet.stage = PLANET_STAGE_VOLCANIC;
+    planet.stageTime = 0;
+    planet.flash = 1.0;
+    spawnVolcanicBurst(planet);
+    return true;
+  }
+  if (stage === PLANET_STAGE_VOLCANIC && sinceStage >= PLANET_STAGE_COOLDOWN) {
+    planet.stage = PLANET_STAGE_OCEAN;
+    planet.stageTime = 0;
+    planet.flash = 0.6;
+    spawnRainBurst(planet);
+    return true;
+  }
+  return false;
 }
 
 function findPlanetBodyAt(x, y, typeFilter) {
@@ -2368,6 +2577,8 @@ function countPlanetLife() {
 
 const PLANET_STATE_PALETTE = {
   barren: { base: "#7a6a55", glow: "rgba(140, 120, 90, 0.20)", accent: "#5d503e" },
+  volcanic: { base: "#a14322", glow: "rgba(255, 130, 50, 0.45)", accent: "#ffb347" },
+  ocean: { base: "#2c7ab5", glow: "rgba(80, 160, 220, 0.40)", accent: "#9adcff" },
   frozen: { base: "#cde2ee", glow: "rgba(190, 220, 240, 0.32)", accent: "#fdfdff" },
   habitable: { base: "#3a86c4", glow: "rgba(70, 150, 220, 0.36)", accent: "#5b8a4b" },
   alive: { base: "#2d9bd0", glow: "rgba(70, 220, 130, 0.40)", accent: "#3acb6a" },
@@ -2416,6 +2627,7 @@ function drawPlanets() {
   }
 
   drawSupernovaFlashes(ctx);
+  drawPlanetParticles(ctx);
   ctx.restore();
 }
 
@@ -2566,6 +2778,30 @@ function drawPlanetBody(ctx, body) {
       ctx.lineTo(body.x + Math.cos(a) * body.radius * 0.85, body.y + Math.sin(a) * body.radius * 0.85);
     }
     ctx.stroke();
+  } else if (body.state === "volcanic") {
+    // Glowing magma fissures across the surface.
+    ctx.strokeStyle = `hsla(20, 100%, 60%, ${0.55 + Math.sin(body.pulse * 1.6) * 0.3})`;
+    ctx.lineWidth = Math.max(1, body.radius * 0.16);
+    ctx.beginPath();
+    const fissures = 4;
+    for (let k = 0; k < fissures; k++) {
+      const a = body.seed * Math.PI * 2 + (k * Math.PI * 2) / fissures + body.pulse * 0.05;
+      ctx.moveTo(body.x + Math.cos(a) * body.radius * 0.15, body.y + Math.sin(a) * body.radius * 0.15);
+      ctx.lineTo(body.x + Math.cos(a) * body.radius * 0.9, body.y + Math.sin(a) * body.radius * 0.9);
+    }
+    ctx.stroke();
+  } else if (body.state === "ocean") {
+    // Reflective bands suggesting a planet-wide ocean.
+    ctx.strokeStyle = "rgba(220, 240, 255, 0.55)";
+    ctx.lineWidth = Math.max(1, body.radius * 0.1);
+    for (let k = 0; k < 3; k++) {
+      const yoff = body.radius * (-0.55 + k * 0.45);
+      const halfW = Math.sqrt(Math.max(0, body.radius * body.radius - yoff * yoff)) * 0.85;
+      ctx.beginPath();
+      ctx.moveTo(body.x - halfW, body.y + yoff);
+      ctx.lineTo(body.x + halfW, body.y + yoff);
+      ctx.stroke();
+    }
   }
 }
 
