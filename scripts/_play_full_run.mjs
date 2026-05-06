@@ -104,11 +104,34 @@ async function targetClickByStage(stageNeeded, label) {
 }
 
 if (planetsAfter.length === 0) {
-  console.log("no planets formed via accretion — skipping stage clicks");
+  console.log("no planets formed via accretion — skipping ring clicks");
 } else {
-  await targetClickByStage(0, "click1 (barren → volcanic)");
-  await page.waitForTimeout(2400);
-  await targetClickByStage(1, "click2 (volcanic → ocean)");
+  // Ring rhythm: poll the debug hook fast, click whenever any planet has its
+  // ring inside the hit zone. Three timed hits clear the game.
+  const stageDeadline = Date.now() + 25000;
+  let lastHitsSeen = 0;
+  while (Date.now() < stageDeadline) {
+    const dbg = await page.evaluate(() => window.__planetDebug());
+    if (dbg.phase === 4) break; // victory
+    const hot = dbg.bodies
+      .filter((b) => b.type === "planet" && b.ring && b.ring.inHitZone && (b.stage || 0) < 3)
+      .sort((a, b) => (b.ring.hits || 0) - (a.ring.hits || 0))[0];
+    if (hot) {
+      const sx = (hot.x - dbg.cam.x) * dbg.cam.zoom + dbg.canvas.w / 2;
+      const sy = (hot.y - dbg.cam.y) * dbg.cam.zoom + dbg.canvas.h / 2;
+      const hits = hot.ring.hits || 0;
+      if (hits !== lastHitsSeen) {
+        lastHitsSeen = hits;
+      }
+      console.log(`ring tap stage=${hot.stage} hits=${hits} ringR=${hot.ring.radius.toFixed(1)} planetR=${hot.radius.toFixed(1)}`);
+      await canvas.click({ position: { x: sx, y: sy }, force: true });
+      // Wait for next ring cycle so we don't spam clicks before the
+      // next contraction puts the ring back into the hit zone.
+      await page.waitForTimeout(900);
+    } else {
+      await page.waitForTimeout(80);
+    }
+  }
 }
 
 const start = Date.now();

@@ -243,7 +243,7 @@ const COPY = {
     planetHintInflation: "クリックで真空のゆらぎを撒く。膨張する宇宙の中で素粒子が陽子や中性子になり、水素やヘリウムの原子核が生まれる。",
     planetHintStars: "重力で物質が集まり、最初の星が灯る瞬間を待つ。粒が足りなければ追加してもいい。",
     planetHintSupernova: "星の中心で炭素・酸素・鉄などの重い元素が作られた。膨らんだ恒星をクリックして超新星にし、重元素と小惑星を宇宙へばら撒こう。",
-    planetHintPlanets: "小惑星のディスクが集まって原始惑星になる。惑星をクリックで火山噴火を起こし、少し待ってからもう一度クリックで雨を降らせて海をつくる。海に達した惑星がハビタブルゾーンに留まると生命が芽生える。",
+    planetHintPlanets: "小惑星のディスクが集まって原始惑星になる。惑星にリングが収縮して重なる瞬間にタップ。3回タイミングよく当てると 火山 → 雨 → 生命 と進み地球が完成する。",
     planetHintVictory: "地球が誕生し、生命が安定して根付いた。クリア！",
     planetVictoryTitle: "地球誕生",
     planetVictorySub: "生命が宿る惑星が安定しました。",
@@ -270,7 +270,7 @@ const COPY = {
     planetIntroSupernovaTitle: "重い元素の誕生",
     planetIntroSupernovaBody: "星の中心で炭素・酸素・鉄・ケイ素が作られる。星が寿命を迎えて超新星爆発を起こすと、重元素が宇宙空間にばら撒かれる。",
     planetIntroPlanetsTitle: "太陽系の誕生と地球の進化",
-    planetIntroPlanetsBody: "微惑星から育った原始惑星をクリックして火山活動 → 雨 → 海と進めよう。ハビタブルゾーンの海洋惑星に生命が芽生える。",
+    planetIntroPlanetsBody: "原始惑星にリングが収縮する。重なる瞬間に3回タップ。火山 → 雨 → 生命の順で地球が誕生する。",
     planetIntroVictoryTitle: "地球誕生",
     planetIntroVictoryBody: "重い元素と水が揃い、生命が根付いた惑星が安定した。",
     mgmtDayLabel: "日",
@@ -563,7 +563,7 @@ const COPY = {
     planetHintInflation: "Click to scatter quantum fluctuations. As the universe expands and cools, particles become protons, neutrons, and light nuclei (H, He).",
     planetHintStars: "Gravity pulls matter together. Wait for the first stars to ignite — add more motes if needed.",
     planetHintSupernova: "Heavy elements like carbon, oxygen, and iron are forged in stellar cores. Click a swollen star to detonate a supernova and scatter them.",
-    planetHintPlanets: "The asteroid disk accretes into protoplanets. Click a planet to ignite volcanic outgassing, wait a moment, then click again to bring the rains and form an ocean. An ocean planet inside the habitable band births life.",
+    planetHintPlanets: "The asteroid disk accretes into protoplanets. Tap when the ring closes onto a planet — three on-time hits cycle volcano → rain → life and birth Earth.",
     planetHintVictory: "Earth has been born and life is stable. Cleared!",
     planetVictoryTitle: "Earth Born",
     planetVictorySub: "A living world has stabilized.",
@@ -590,7 +590,7 @@ const COPY = {
     planetIntroSupernovaTitle: "Forging heavy elements",
     planetIntroSupernovaBody: "Stars fuse carbon, oxygen, iron, and silicon in their cores. When they die in supernovae, those elements scatter across the cosmos.",
     planetIntroPlanetsTitle: "Solar system & a young Earth",
-    planetIntroPlanetsBody: "Click a protoplanet for volcanic outgassing → wait → click again for rain. An ocean planet in the habitable band sparks life.",
+    planetIntroPlanetsBody: "A ring contracts onto each protoplanet. Tap during the overlap three times — volcano, rain, and life cycle into Earth.",
     planetIntroVictoryTitle: "Earth is born",
     planetIntroVictoryBody: "With heavy elements and water in place, a stable, living world has emerged.",
     mgmtDayLabel: "DAY",
@@ -971,6 +971,14 @@ window.__planetDebug = () => ({
     stageTime: b.stageTime,
     habitableTime: b.habitableTime,
     aliveTime: b.aliveTime,
+    ring: b.ring
+      ? {
+          radius: b.ring.radius,
+          inHitZone: b.ring.inHitZone,
+          hits: b.ring.hits,
+          cycleProgress: b.ring.cycleProgress,
+        }
+      : null,
   })),
 });
 
@@ -1095,12 +1103,13 @@ planetCanvas.addEventListener("click", (e) => {
       acted = triggerPlanetSupernova(star);
     }
   } else if (planetPhase === PLANET_PHASE_PLANETS) {
-    // Clicking on an existing planet advances its evolution stage:
-    //   barren → volcanic outgassing → ocean (eligible for life).
-    // Clicking empty space adds a new (barren) planet.
+    // Click during a planet's "ring overlap" window scores a hit. Three
+    // timed hits walk the world from barren → volcanic → ocean → alive,
+    // and the third hit clears the game. Clicks that miss the window
+    // still register (visual flash) but don't count.
     const existing = findPlanetBodyAt(x, y, "planet");
     if (existing) {
-      acted = advancePlanetStage(existing);
+      acted = tryHitPlanetRing(existing);
     } else if (planetBodies.length < PLANET_MAX_BODIES) {
       planetBodies.push(createPlanetBody(x, y, "planet"));
       acted = true;
@@ -1769,12 +1778,17 @@ const ASTEROID_HABITABLE_BONUS = 1.6;
 const ASTEROID_TO_PLANET_MASS = 7;
 const LIFE_DURATION_TARGET = 5;
 
-// Planet evolution stages. Each click on a planet during the planets phase
-// advances it to the next stage; stage 2 is the prerequisite for life.
+// Planet evolution stages. The ring rhythm carries the player from
+// barren → volcanic → ocean → alive over three timed hits.
 const PLANET_STAGE_BARREN = 0;
 const PLANET_STAGE_VOLCANIC = 1;
 const PLANET_STAGE_OCEAN = 2;
-const PLANET_STAGE_COOLDOWN = 2.0; // seconds the player must wait between clicks
+const PLANET_STAGE_LIFE = 3;
+const PLANET_RING_HITS_TARGET = 3;
+const PLANET_RING_CYCLE_SEC = 2.5; // outer→inner contraction time
+const PLANET_RING_OUTER_MULT = 4.5;
+const PLANET_RING_INNER_MULT = 0.55;
+const PLANET_RING_TOLERANCE_MULT = 1.5; // generous timing window — "判定はゆるく"
 
 const PLANET_TYPE_PRIORITY = { star: 5, planet: 4, gas: 3, asteroid: 2, mote: 1 };
 const PLANET_TYPES = {
@@ -1797,8 +1811,8 @@ const PLANET_TYPES = {
   star: {
     massBase: 240,
     massVariance: 100,
-    radiusFactor: 3.6,
-    minRadius: 12,
+    radiusFactor: 2.6,
+    minRadius: 10,
     speedRange: [0, 3],
     trailColor: "rgba(255, 210, 130, 0.18)",
   },
@@ -1927,6 +1941,25 @@ function spawnVolcanicBurst(planet) {
   }
 }
 
+function spawnLifeBurst(planet) {
+  const n = 30 + Math.floor(Math.random() * 8);
+  for (let i = 0; i < n; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 28 + Math.random() * 22;
+    const r = planet.radius * (1.0 + Math.random() * 0.4);
+    planetParticles.push({
+      kind: "life",
+      x: planet.x + Math.cos(angle) * r,
+      y: planet.y + Math.sin(angle) * r,
+      vx: planet.vx + Math.cos(angle) * speed * 0.6,
+      vy: planet.vy + Math.sin(angle) * speed * 0.6,
+      life: 1.6 + Math.random() * 0.8,
+      age: 0,
+      size: 1.0 + Math.random() * 1.2,
+    });
+  }
+}
+
 function spawnRainBurst(planet) {
   const n = 24 + Math.floor(Math.random() * 8);
   for (let i = 0; i < n; i++) {
@@ -2021,6 +2054,15 @@ function drawPlanetParticles(ctx) {
       ctx.fillStyle = `hsla(210, 100%, 80%, ${0.78 * t})`;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.kind === "life") {
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2.4);
+      grad.addColorStop(0, `hsla(140, 100%, 80%, ${0.95 * t})`);
+      grad.addColorStop(0.55, `hsla(160, 100%, 60%, ${0.55 * t})`);
+      grad.addColorStop(1, "rgba(40, 100, 60, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 2.4, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -2129,6 +2171,16 @@ function createPlanetBody(x, y, typeKey) {
     trailColor: config.trailColor,
     trail: [],
     flash: 0,
+    ring: type === "planet" ? createPlanetRing() : null,
+  };
+}
+
+function createPlanetRing() {
+  return {
+    cycleProgress: Math.random() * 0.4, // stagger so multiple planets aren't perfectly in sync
+    radius: 0,
+    inHitZone: false,
+    hits: 0,
   };
 }
 
@@ -2142,6 +2194,7 @@ function startPlanetLoop() {
     lastTime = now;
     stepPlanets(dt);
     stepPlanetParticles(dt);
+    stepPlanetRings(dt);
     stepPlanetCamera(dt);
     drawPlanets();
     planetAnimFrame = requestAnimationFrame(loop);
@@ -2327,13 +2380,14 @@ function stepPlanets(dt) {
       a.trail = [];
       if (a.type === "planet") {
         a.state = a.state || "barren";
-        // Accreted protoplanets arrive barren — the player still has to
-        // trigger volcanism and rain to make them habitable.
+        // Accreted protoplanets arrive barren — the player has to land
+        // three timed ring hits to walk it from barren → life.
         if (promotedFromAsteroid) {
           a.stage = PLANET_STAGE_BARREN;
           a.stageTime = 0;
           a.habitableTime = 0;
           a.aliveTime = 0;
+          a.ring = createPlanetRing();
         }
         // Re-circularise the protoplanet's orbit around the dominant star.
         // Pure mass-weighted COM velocities from accretion are usually not
@@ -2454,11 +2508,11 @@ function triggerPlanetSupernova(star) {
 
   // Supernova leaves a remnant (white-dwarf / neutron-star-style core) so
   // there is always a sun for the planets phase. The remnant is plumped up
-  // here so the habitable zone sits well outside the star's body — a much
-  // bigger sun pushes the habitable band well past the star's surface and
-  // leaves a clear visual gap between the star and the orbits.
+  // and the visual radius factor was reduced separately, so the habitable
+  // band sits well past the star's photosphere with plenty of empty space
+  // for orbits to be obviously distinct from the surface of the sun.
   const originalRadius = star.radius;
-  const remnantMass = Math.max(1800, Math.min(2600, star.mass * 1.7 + 800));
+  const remnantMass = Math.max(2400, Math.min(3400, star.mass * 1.9 + 1100));
   star.mass = remnantMass;
   star.radius = planetRadiusFor("star", remnantMass);
   if (star.trail) star.trail.length = 0;
@@ -2468,13 +2522,13 @@ function triggerPlanetSupernova(star) {
   // accrete into protoplanets without further user input.
   const config = PLANET_TYPES.asteroid;
   const count = 14 + Math.floor(Math.random() * 5);
-  // Bias the dust ring toward the outer half of the habitable band so the
-  // resulting protoplanets settle visibly far from the sun (Earth orbits
-  // in the cool-but-livable zone, not just outside the photosphere).
+  // Bias the dust ring deep into the outer cool band of the habitable zone
+  // so the protoplanets land clearly far from the sun, like Earth at 1 AU
+  // around a cool yellow star — not crammed against the photosphere.
   const habInner = Math.sqrt(remnantMass / PLANET_HEAT_HOT);
   const habOuter = Math.sqrt(remnantMass / PLANET_HEAT_FROZEN);
-  const baseR = habInner + (habOuter - habInner) * 0.65;
-  const halfBand = (habOuter - habInner) * 0.32;
+  const baseR = habInner + (habOuter - habInner) * 0.82;
+  const halfBand = (habOuter - habInner) * 0.18;
   for (let k = 0; k < count; k++) {
     const angle = (k / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
     const offsetR = baseR + (Math.random() - 0.5) * halfBand * 2;
@@ -2508,40 +2562,58 @@ function triggerPlanetSupernova(star) {
   }
   planetSupernovaFlashes.push({ x: cx, y: cy, t: 0, life: 0.9, radius: originalRadius });
   planetSupernovas++;
-  // Hand the camera the cue to dolly in on the new system. Tighter zoom
-  // makes the star and orbits look properly large without crowding them
-  // against each other.
-  startPlanetCameraZoom(cx, cy, 1.4);
+  // Pull the camera back a hair so the orbit ring at high outer-band r
+  // still fits comfortably and the sun looks like a sun, not a wall.
+  startPlanetCameraZoom(cx, cy, 1.05);
   return true;
 }
 
-function advancePlanetStage(planet) {
-  if (!planet) return false;
-  const stage = planet.stage || 0;
-  const sinceStage = planet.stageTime || 0;
-  if (stage === PLANET_STAGE_BARREN) {
+function stepPlanetRings(dt) {
+  for (const body of planetBodies) {
+    if (body.type !== "planet") continue;
+    if (!body.ring) continue;
+    if ((body.stage || 0) >= PLANET_STAGE_LIFE) continue;
+    body.ring.cycleProgress += dt / PLANET_RING_CYCLE_SEC;
+    if (body.ring.cycleProgress >= 1) body.ring.cycleProgress = 0;
+    const outer = body.radius * PLANET_RING_OUTER_MULT;
+    const inner = body.radius * PLANET_RING_INNER_MULT;
+    body.ring.radius = outer - (outer - inner) * body.ring.cycleProgress;
+    const tolerance = body.radius * PLANET_RING_TOLERANCE_MULT;
+    body.ring.inHitZone = Math.abs(body.ring.radius - body.radius) <= tolerance;
+  }
+}
+
+function tryHitPlanetRing(planet) {
+  if (!planet || !planet.ring) return false;
+  if ((planet.stage || 0) >= PLANET_STAGE_LIFE) return false;
+  if (!planet.ring.inHitZone) {
+    // Visible "miss" feedback so the player understands the timing matters.
+    planet.flash = 0.25;
+    return false;
+  }
+  planet.ring.hits = (planet.ring.hits || 0) + 1;
+  planet.flash = 1.0;
+  if (planet.ring.hits === 1) {
     planet.stage = PLANET_STAGE_VOLCANIC;
     planet.stageTime = 0;
-    planet.flash = 1.0;
+    planet.state = "volcanic";
     spawnVolcanicBurst(planet);
-    return true;
-  }
-  if (stage === PLANET_STAGE_VOLCANIC && sinceStage >= PLANET_STAGE_COOLDOWN) {
+  } else if (planet.ring.hits === 2) {
     planet.stage = PLANET_STAGE_OCEAN;
     planet.stageTime = 0;
-    planet.flash = 0.6;
+    planet.state = "ocean";
     spawnRainBurst(planet);
-    // The atmosphere has cooled and the orbit has settled by the time water
-    // forms oceans. Re-circularise around the dominant star so the planet
-    // doesn't oscillate in and out of the habitable band — this is the
-    // moment life gets a stable cradle.
+  } else if (planet.ring.hits >= PLANET_RING_HITS_TARGET) {
+    planet.stage = PLANET_STAGE_LIFE;
+    planet.stageTime = 0;
+    // Stabilise the orbit and grant life immediately on the third timed hit.
     let bestStar = null;
     let bestD2 = Infinity;
     for (const body of planetBodies) {
       if (body.type !== "star") continue;
-      const dx = planet.x - body.x;
-      const dy = planet.y - body.y;
-      const d2 = dx * dx + dy * dy;
+      const ddx = planet.x - body.x;
+      const ddy = planet.y - body.y;
+      const d2 = ddx * ddx + ddy * ddy;
       if (d2 < bestD2) {
         bestD2 = d2;
         bestStar = body;
@@ -2563,9 +2635,15 @@ function advancePlanetStage(planet) {
         planet.vy = bestStar.vy + ty * orbitV * spin;
       }
     }
-    return true;
+    spawnLifeBurst(planet);
+    planet.state = "alive";
+    planet.habitableTime = PLANET_LIFE_DELAY;
+    planet.aliveTime = LIFE_DURATION_TARGET;
   }
-  return false;
+  // Restart the ring cycle so the next hit needs a fresh tap.
+  planet.ring.cycleProgress = 0;
+  planet.ring.inHitZone = false;
+  return true;
 }
 
 function findPlanetBodyAt(x, y, typeFilter) {
@@ -2576,7 +2654,16 @@ function findPlanetBodyAt(x, y, typeFilter) {
     const dx = body.x - x;
     const dy = body.y - y;
     const d2 = dx * dx + dy * dy;
-    const reach = (body.radius + 10) ** 2;
+    // For planets, expand the click hitbox to include the ring's outer
+    // radius — that way a tap anywhere from the planet itself out to
+    // where the ring sits still resolves to "this planet" for the rhythm
+    // mechanic. Without this the small planet sprite would be the only
+    // legal click target.
+    let reachR = body.radius + 10;
+    if (body.type === "planet" && body.ring) {
+      reachR = Math.max(reachR, body.radius * (PLANET_RING_OUTER_MULT + 0.5));
+    }
+    const reach = reachR * reachR;
     if (d2 <= reach && d2 < bestDist) {
       best = body;
       bestDist = d2;
@@ -2662,7 +2749,39 @@ function drawPlanets() {
 
   drawSupernovaFlashes(ctx);
   drawPlanetParticles(ctx);
+  drawPlanetRings(ctx);
   ctx.restore();
+}
+
+function drawPlanetRings(ctx) {
+  for (const body of planetBodies) {
+    if (body.type !== "planet") continue;
+    if (!body.ring) continue;
+    if ((body.stage || 0) >= PLANET_STAGE_LIFE) continue;
+    const inZone = body.ring.inHitZone;
+    const lineWidth = (inZone ? 2.6 : 1.8) / planetCamZoom;
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = inZone
+      ? `hsla(150, 100%, 70%, ${0.85 + Math.sin(body.pulse * 6) * 0.15})`
+      : "hsla(40, 80%, 75%, 0.45)";
+    ctx.beginPath();
+    ctx.arc(body.x, body.y, body.ring.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    // Hit count beads above the planet so the player can see progress.
+    const total = PLANET_RING_HITS_TARGET;
+    const beadR = 2 / planetCamZoom;
+    const spacing = body.radius * 0.7;
+    const baseY = body.y - body.radius * 1.9;
+    for (let i = 0; i < total; i++) {
+      const beadX = body.x + (i - (total - 1) / 2) * spacing;
+      ctx.fillStyle = i < (body.ring.hits || 0)
+        ? "hsla(140, 100%, 70%, 0.95)"
+        : "hsla(220, 35%, 55%, 0.45)";
+      ctx.beginPath();
+      ctx.arc(beadX, baseY, beadR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 }
 
 function drawSupernovaFlashes(ctx) {
