@@ -4,7 +4,8 @@
 
 - このフォルダでは `seetona.com` / `www.seetona.com` 向けのホームページと軽量 Python CGI アプリを管理している
 - トップページでは Three.js の 3D ロゴを回せる
-- 同じページの中でマインスイーパーとバイナリシミュレーションを遊べる
+- トップページは回転ロゴ、画像付きのゲーム一覧、GitHubの代表作一覧に絞り、既存ゲーム本体は共通の `game.html` で配信する
+- `Rogue Barrier` は別アプリとして `/rogue/` にあり、トップから通常リンクで遷移する
 - 本番基準は `publish/`。XREA 上の Python CGI 配備を前提にしている
 - `publish2/` はホームページ部分の静的確認用コピー
 - `local/` は公開しない運用資料、DNS/SSL 手順、診断メモの置き場
@@ -13,8 +14,7 @@
 
 - 公開向けの修正はまず `publish/` を基準に考える
 - `publish2/` は `publish/static/` の静的確認コピーとして扱う
-- `publish2/app.js` と `publish/static/app.js` は同内容
-- `publish2/styles.css` と `publish/static/styles.css` は同内容
+- `publish2/home.js` / `home.css` / `logo.js` と `publish/static/` の同名ファイルは同内容
 - `publish2/index.html` は静的確認向けに参照パスを切り替えた別コピーとして扱う
 - `publish/runtime/` 以下の JSON はセッションや日次キャッシュの生成物で、通常は手編集しない
 - `local/ssl/.venv-certbot/` と `local/ssl/state/` は大きく、かつ機微情報を含むので、SSL 作業時以外は深入りしない
@@ -70,15 +70,25 @@
 - `scripts/post_to_x_browser.py`
   ローカル PC の実ブラウザを Playwright で操作して無料で X 投稿するスクリプト
 - `publish/static/index.html`
-  `www.seetona.com` 向けホームページ本体
+  回転ロゴとゲームリンクだけのホームページ本体
 - `publish/index.html`
   XREA の広告自動挿入対象に乗せるための物理トップページ。内容は `publish/static/index.html` と同期して扱う
+- `publish/static/game.html`
+  ローカルサーバーが既存6ゲームの pretty URL に返す共通ゲーム画面
+- `publish/game.html`
+  XREA / Apache が既存6ゲームの pretty URL に返す物理ゲーム画面。内容は `publish/static/game.html` と同期して扱う
+- `publish/static/home.js`
+  トップページで回転ロゴだけを初期化する小さな入口
+- `publish/static/logo.js`
+  トップと共通ゲーム画面で共有する Three.js の3Dロゴ、自動回転、ドラッグ・タッチ回転
+- `publish/static/home.css`
+  トップページ専用の最小スタイル
+- `publish/static/portfolio/`
+  トップページのゲーム7件とGitHub代表作5件に使う、1200×800の軽量JPEG
 - `publish/static/app.js`
-  Three.js の 3D ロゴ演出、言語切替、ゲーム切替、ゲーム API 呼び出し
+  共通ゲーム画面の言語切替、ゲーム切替、ゲーム API 呼び出し。ロゴ処理は `logo.js` を読み込む
 - `publish/static/styles.css`
-  現在のホームページ全体のスタイル
-- `publish/static/style.css`
-  旧マインスイーパー単体ページ向けスタイル。現行 `index.html` では未使用
+  共通ゲーム画面のスタイル
 - `publish/.htaccess`
   HTTPS / ホスト統一リダイレクトと公開制御
 - `publish/runtime/.htaccess`
@@ -91,10 +101,10 @@
   バイナリシミュレーションのテスト
 - `publish2/index.html`
   ホームページの静的確認用 HTML
-- `publish2/app.js`
-  静的確認用の演出・UI スクリプト
-- `publish2/styles.css`
-  静的確認用のスタイル
+- `publish2/home.js` / `publish2/home.css` / `publish2/logo.js`
+  静的確認用のトップページ資産
+- `publish2/portfolio/`
+  `publish/static/portfolio/` と同内容の静的確認用コピー
 - `local/SEETONA_SETUP.md`
   `www.seetona.com` への切り替え手順
 - `local/SEETONA_APEX_FIX_XREA_20260309.md`
@@ -114,9 +124,8 @@
 
 - ホームページのファーストビューに Three.js の 3D ロゴ演出がある
 - ロゴはドラッグやタッチで回せる
-- 日本語 / 英語の切替に対応している
-- ゲーム棚 UI があり、`minesweeper` と `binary` は playable
-- `planet` `management` `tetris` `solitaire` は見せ枠だけあり、まだ未実装
+- ホームページには `rogue` と既存6ゲームへの通常リンク、およびGitHubの代表作への静的リンクがある
+- 既存6ゲームの共通画面は日本語 / 英語切替とゲーム棚 UI に対応している
 - マインスイーパー
   - 難易度は `easy` `medium` `hard`
   - 初手安全
@@ -140,9 +149,12 @@
 - `app.xcg?action=binary_state|binary_trade|binary_reset` がバイナリ API
 - `/api/` 配下も `app_core.py` が同じ API に流す
 - 本番の `/` と `/index.html` は Apache が `publish/index.html` を返す
+- 本番の `/minesweeper/` `/binary/` `/planet/` `/management/` `/fishing/` `/solitaire/` は Apache が `publish/game.html` を返す
+- 本番の `/rogue/` は独立アプリの物理ディレクトリであり、親サイトの SPA rewrite 対象には入れない
 - `/app.xcg` は `action` 付きの API エンドポイントとして使い、`action` なし直アクセスは `/index.html` へ戻す
 - ローカル確認用サーバーでは `/`, `/index.html`, `/app.xcg`, `/app.py` を `publish/static/index.html` へ流している
-- ルート直下の `styles.css` と `app.js` も静的配信する
+- ローカル確認用サーバーでは既存6ゲームの pretty URL を `publish/static/game.html` へ流す
+- ルート直下の `home.css` `home.js` `logo.js` `styles.css` `app.js` も静的配信する
 - `publish/.htaccess` では `setn.shop` と `seetona.com` apex を `https://www.*` へ寄せ、`runtime/` `tests/` `__pycache__/` 直アクセスを遮断している
 
 ## 運用メモ
@@ -175,5 +187,6 @@ python -m unittest discover -s publish/tests
 - `publish/static/` と `publish2/` には似たホームページ資産がある
 - `publish/static/` は Python CGI アプリに組み込まれた本番寄りの配置
 - `publish2/` は単体プレビューしやすい作業用コピー
+- 親サイトのローカルサーバー単体では独立アプリ `/rogue/` は配信しない
 - 現在の 3D ロゴは `three` とその追加モジュールを CDN から読み込んでいる
 - binary UI には live provider の文言も残るが、Python バックエンドで実装されているのはヒストリカル再生ベースの状態管理

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SEETONA ホーム</title>
+<meta content="3Dロゴを触って回し、そのままゲーム棚からマインスイーパーやバイナリシミュレーションを選べる SEETONA のホームページです。" name="description"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js"
+      }
+    }
+  </script>
+<link href="/static/styles.css?v=20260824a" rel="stylesheet"/>
+
+</head>
+<body>
+<div class="page-shell">
+<header class="site-header">
+<a class="brand" href="/">
+<span class="brand-mark"></span>
+<span class="brand-text">SEETONA</span>
+</a>
+<div class="header-tools">
+<nav aria-label="グローバルナビゲーション" class="site-nav" data-i18n="navAria" data-i18n-attr="aria-label">
+<a data-i18n="navPlay" href="#play">Games</a>
+<a data-i18n="navMotion" href="#motion">Motion</a>
+</nav>
+<div aria-label="言語切替" class="language-switch" data-i18n="languageGroupLabel" data-i18n-attr="aria-label" role="group">
+<span class="language-label" data-i18n="languageLabel">LANGUAGE</span>
+<button data-language-option="ja" type="button">JP</button>
+<button data-language-option="en" type="button">EN</button>
+</div>
+</div>
+</header>
+<main id="top">
+<section class="game-hub" id="play">
+<div class="section-head play-head">
+<p class="panel-label" data-i18n="playSectionLabel">GAME SHELF</p>
+<h1 data-i18n="playSectionTitle">GAMES</h1>
+</div>
+<div aria-label="ゲーム選択棚" class="game-library" data-i18n="gameLibraryAria" data-i18n-attr="aria-label">
+<button aria-pressed="true" class="game-select-card is-selected" data-game-select="minesweeper" type="button">
+<span class="game-chip live" data-i18n="gameMinesChip">PLAYABLE</span>
+<div aria-hidden="true" class="thumb thumb-minesweeper">
+<span></span><span></span><span></span><span></span><span></span>
+<span></span><span class="is-open n1">1</span><span class="is-open n2">2</span><span></span><span></span>
+<span></span><span class="is-flag">!</span><span class="is-open n3">3</span><span></span><span></span>
+<span></span><span></span><span class="is-open n1">1</span><span></span><span></span>
+<span></span><span></span><span></span><span></span><span></span>
+</div>
+<strong data-i18n="gameMinesTitle">マインスイーパー</strong>
+<p data-i18n="gameMinesBody">そのまま読み込んで遊べる、最初の常設ゲームです。</p>
+</button>
+<button aria-pressed="false" class="game-select-card" data-game-select="binary" type="button">
+<span class="game-chip live" data-i18n="gameBinaryChip">PLAYABLE</span>
+<div aria-hidden="true" class="thumb thumb-binary">
+<span class="binary-line"></span>
+<span class="binary-dot a"></span>
+<span class="binary-dot b"></span>
+<span class="binary-dot c"></span>
+<span class="binary-pill up">UP</span>
+<span class="binary-pill down">DOWN</span>
+</div>
+<strong data-i18n="gameBinaryTitle">バイナリシミュレーション</strong>
+<p data-i18n="gameBinaryBody">10万円から始めて、昨日までの為替データを1秒ごとに再生する練習用バイナリです。</p>
+</button>
+<button aria-pressed="false" class="game-select-card" data-game-select="planet" type="button">
+<span class="game-chip live" data-i18n="gamePlanetChip">PLAYABLE</span>
+<div aria-hidden="true" class="thumb thumb-planet">
+<span class="orbit orbit-a"></span>
+<span class="orbit orbit-b"></span>
+<span class="planet-core"></span>
+<span class="planet-dot dot-a"></span>
+<span class="planet-dot dot-b"></span>
+</div>
+<strong data-i18n="gamePlanetTitle">惑星シミュレーション</strong>
+<p data-i18n="gamePlanetBody">重力や軌道を触って遊ぶ枠を先に置いています。</p>
+</button>
+<button aria-pressed="false" class="game-select-card" data-game-select="management" type="button">
+<span class="game-chip live" data-i18n="gameManagementChip">PLAYABLE</span>
+<div aria-hidden="true" class="thumb thumb-management">
+<span class="bar bar-a"></span>
+<span class="bar bar-b"></span>
+<span class="bar bar-c"></span>
+<span class="bar bar-d"></span>
+<span class="ledger"></span>
+</div>
+<strong data-i18n="gameManagementTitle">経営シミュレーション</strong>
+<p data-i18n="gameManagementBody">数字を伸ばしながら店や会社を回す枠です。</p>
+</button>
+<button aria-pressed="false" class="game-select-card" data-game-select="fishing" type="button">
+<span class="game-chip live" data-i18n="gameFishingChip">SONAR ONLY</span>
+<div aria-hidden="true" class="thumb thumb-fishing">
+<span class="sonar-ring ring-a"></span>
+<span class="sonar-ring ring-b"></span>
+<span class="sonar-ring ring-c"></span>
+<span class="sonar-sweep-line"></span>
+<span class="school-mark mark-a"></span>
+<span class="school-mark mark-b"></span>
+<span class="school-mark mark-c"></span>
+</div>
+<strong data-i18n="gameFishingTitle">漁業シミュレーション</strong>
+<p data-i18n="gameFishingBody">ソナーで魚群を探し、向かうか別海域を探すかを決める探索ゲームです。</p>
+</button>
+<button aria-pressed="false" class="game-select-card" data-game-select="solitaire" type="button">
+<span class="game-chip live" data-i18n="gameSolitaireChip">PLAYABLE</span>
+<div aria-hidden="true" class="thumb thumb-solitaire">
+<span class="card back"></span>
+<span class="card front"></span>
+<span class="card front top"></span>
+</div>
+<strong data-i18n="gameSolitaireTitle">ソリティア</strong>
+<p data-i18n="gameSolitaireBody">落ち着いて遊べる一人用ゲームの枠です。</p>
+</button>
+</div>
+<section class="active-game-shell">
+<div class="active-game-head">
+<div>
+<p class="panel-label" data-i18n="gamePanelLabel">NOW PLAYING</p>
+<h2 id="selected-game-title">マインスイーパー</h2>
+<p class="selected-game-copy" id="selected-game-copy">盤面の上に状態と難易度を置き、小さめの盤面をすぐ遊べる形にしています。</p>
+</div>
+<span class="game-chip live" id="selected-game-badge">PLAYABLE</span>
+</div>
+<div class="game-toolbar" id="mines-toolbar">
+<div class="toolbar-row">
+<div class="game-stats">
+<div class="metric-card">
+<span class="metric-label" data-i18n="gameStatusLabel">状態</span>
+<strong id="status-text">待機中</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="gameFlagsLabel">旗残り</span>
+<strong id="flags-left">0</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="gameClearedLabel">クリア</span>
+<strong id="cleared-count">0/0</strong>
+</div>
+</div>
+<div class="difficulty-cluster" id="difficulty-cluster">
+<span class="tool-label" data-i18n="gameDifficultyLabel">DIFFICULTY</span>
+<div class="difficulty-picker">
+<button class="active" data-difficulty="easy" data-i18n="gameDifficultyEasy" type="button">小</button>
+<button data-difficulty="medium" data-i18n="gameDifficultyMedium" type="button">中</button>
+<button data-difficulty="hard" data-i18n="gameDifficultyHard" type="button">大</button>
+</div>
+</div>
+</div>
+<div class="toolbar-row toolbar-notes">
+<div class="control-copy">
+<p data-i18n="gameControlReveal">左クリックまたはタップで開く。</p>
+<p data-i18n="gameControlFlag">右クリックまたは長押しで旗を置く。</p>
+</div>
+<div class="game-actions">
+<button class="button button-ghost" data-i18n="gameRestart" id="restart-button" type="button">新しい盤面</button>
+</div>
+</div>
+</div>
+<div class="game-toolbar" hidden="" id="binary-toolbar">
+<div class="toolbar-row">
+<div class="game-stats binary-stats">
+<div class="metric-card">
+<span class="metric-label" data-i18n="binaryBalanceLabel">残高</span>
+<strong id="binary-balance">¥0</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="binaryQuoteLabel">現在値</span>
+<strong id="binary-quote">--</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="binaryProviderLabel">レート</span>
+<strong id="binary-provider">--</strong>
+</div>
+</div>
+</div>
+<div class="toolbar-row toolbar-notes">
+<div class="control-copy">
+<p data-i18n="binaryStatusDefault" id="binary-status-line">通貨ペアごとに1日1ケースをチャートで再生します。</p>
+<p data-i18n="binaryProviderDefault" id="binary-provider-line">昨日までの実データから作った疑似リアルタイムケースです。</p>
+</div>
+</div>
+</div>
+<div class="game-toolbar" hidden="" id="fishing-toolbar">
+<div class="toolbar-row">
+<div class="game-stats">
+<div class="metric-card">
+<span class="metric-label" data-i18n="fishingSweepsLabel">SWEEPS</span>
+<strong id="fishing-sweeps">0</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="fishingSignalLabel">SIGNAL</span>
+<strong id="fishing-signal">未探知</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="fishingDecisionLabel">DECISION</span>
+<strong id="fishing-decision">待機</strong>
+</div>
+</div>
+</div>
+<div class="toolbar-row toolbar-notes">
+<div class="control-copy">
+<p data-i18n="fishingControlScan">ソナーで海域を走査して魚群反応を探す。</p>
+<p data-i18n="fishingControlDecision">反応が出たら向かうか、別の場所を探すかを決める。</p>
+</div>
+<div class="game-actions">
+<button class="button button-primary" data-i18n="fishingScanAction" id="fishing-scan-button" type="button">ソナーを走らせる</button>
+<button class="button button-ghost" data-i18n="fishingGoAction" id="fishing-go-button" type="button">この群れに向かう</button>
+<button class="button button-ghost" data-i18n="fishingSearchAction" id="fishing-search-button" type="button">別の場所を探す</button>
+</div>
+</div>
+</div>
+<div class="game-toolbar" hidden="" id="planet-toolbar">
+<div class="toolbar-row">
+<div class="game-stats">
+<div class="metric-card">
+<span class="metric-label" data-i18n="planetPhaseLabel">段階</span>
+<strong id="planet-phase-text">—</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="planetProgressLabel">進行</span>
+<strong id="planet-progress-text">—</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="planetBodiesLabel">天体数</span>
+<strong id="planet-body-count">0</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="planetLifeLabel">生命</span>
+<strong id="planet-life-count">0</strong>
+</div>
+</div>
+</div>
+<div class="toolbar-row toolbar-notes">
+<div class="control-copy">
+<p data-i18n="planetControlNote">創世記のシナリオ。インフレ → 恒星 → 超新星 → 惑星 と進めて地球を誕生させよう。</p>
+</div>
+<div class="game-actions">
+<button class="button button-ghost" data-i18n="planetPause" id="planet-pause-button" type="button">一時停止</button>
+<button class="button button-ghost" data-i18n="planetReset" id="planet-reset-button" type="button">やり直し</button>
+</div>
+</div>
+</div>
+<div class="game-toolbar" hidden="" id="mgmt-toolbar">
+<div class="toolbar-row">
+<div class="game-stats">
+<div class="metric-card">
+<span class="metric-label" data-i18n="mgmtDayLabel">日</span>
+<strong id="mgmt-day">1</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="mgmtBalanceLabel">残高</span>
+<strong id="mgmt-balance">¥0</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="mgmtCustomersLabel">来客</span>
+<strong id="mgmt-customers">0</strong>
+</div>
+</div>
+</div>
+<div class="toolbar-row toolbar-notes">
+<div class="control-copy">
+<p data-i18n="mgmtControlBuy">仕入れボタンで在庫を補充する。</p>
+<p data-i18n="mgmtControlServe">営業開始で当日の客を迎える。</p>
+</div>
+<div class="game-actions">
+<button class="button button-primary" data-i18n="mgmtServeAction" id="mgmt-serve-button" type="button">営業開始</button>
+<button class="button button-ghost" data-i18n="mgmtResetAction" id="mgmt-reset-button" type="button">リセット</button>
+</div>
+</div>
+</div>
+<div class="game-toolbar" hidden="" id="solitaire-toolbar">
+<div class="toolbar-row">
+<div class="game-stats">
+<div class="metric-card">
+<span class="metric-label" data-i18n="solitaireMovesLabel">手数</span>
+<strong id="solitaire-moves">0</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="solitaireTimeLabel">TIME</span>
+<strong id="solitaire-time">0:00</strong>
+</div>
+<div class="metric-card">
+<span class="metric-label" data-i18n="solitaireStockLabel">山札</span>
+<strong id="solitaire-stock">24</strong>
+</div>
+</div>
+</div>
+<div class="toolbar-row toolbar-notes">
+<div class="control-copy">
+<p data-i18n="solitaireControl1">山札をクリックしてめくる。カードをクリックして選択・移動。</p>
+<p data-i18n="solitaireControl2">全カードを組み札に積んだらクリア。</p>
+</div>
+<div class="game-actions">
+<button class="button button-ghost" data-i18n="solitaireRestart" id="solitaire-restart-button" type="button">新しいゲーム</button>
+</div>
+</div>
+</div>
+<div class="game-surface">
+<div class="game-placeholder" id="game-placeholder">
+<div class="placeholder-thumb" id="game-placeholder-thumb"></div>
+<h3 id="game-placeholder-title">マインスイーパーを読み込み中</h3>
+<p id="game-placeholder-copy">棚から選ぶと同時に盤面の準備を始めます。</p>
+</div>
+<div class="game-loading" hidden="" id="game-loading">
+<span class="loading-spinner"></span>
+<strong data-i18n="gameLoading">読み込み中...</strong>
+<p data-i18n="gameLoadingDetail">Python 側の処理が整うまで少し待ってください。</p>
+</div>
+<div class="game-board-wrap" hidden="" id="game-board-wrap">
+<div aria-label="マインスイーパーの盤面" aria-live="polite" class="board" data-i18n="gameBoardAria" data-i18n-attr="aria-label" id="board"></div>
+</div>
+<section class="binary-panel" hidden="" id="binary-panel">
+<div class="binary-objective" data-status="idle" id="binary-objective">
+<div class="binary-objective-head">
+<span class="binary-objective-label" data-i18n="binaryObjectiveLabel" id="binary-objective-label">勝利条件</span>
+<strong class="binary-objective-target" id="binary-objective-target">残高を3倍 (¥300,000) にする</strong>
+</div>
+<div class="binary-objective-progress-track">
+<div class="binary-objective-progress-fill" id="binary-objective-fill"></div>
+</div>
+<div class="binary-objective-detail" id="binary-objective-detail">現在 ¥100,000 / 残り ¥200,000</div>
+</div>
+<div class="binary-trade-grid">
+<article class="binary-card" hidden="" id="binary-pair-card">
+<p class="tool-label" data-i18n="binaryPairLabel">PAIR</p>
+<div class="binary-pill-row" id="binary-pair-picker"></div>
+</article>
+<article class="binary-card" hidden="" id="binary-duration-card">
+<p class="tool-label" data-i18n="binaryDurationLabel">DURATION</p>
+<div class="binary-pill-row" id="binary-duration-picker"></div>
+</article>
+<article class="binary-card">
+<p class="tool-label" data-i18n="binaryStakeLabel">STAKE</p>
+<div class="binary-pill-row" id="binary-stake-presets"></div>
+<label class="binary-input">
+<span data-i18n="binaryStakeCustom">カスタム金額</span>
+<input id="binary-stake-input" inputmode="numeric" min="1000" step="1000" type="number" value="5000"/>
+</label>
+<button class="button button-primary binary-start-button" data-i18n="binaryStartAction" id="binary-start-button" type="button">
+                    開始
+                  </button>
+</article>
+</div>
+<article class="binary-list-card binary-chart-card">
+<div class="binary-card-head">
+<span class="panel-label" data-i18n="binaryChartLabel">CHART</span>
+<h3 data-i18n="binaryChartTitle">ケースグラフ</h3>
+</div>
+<div class="binary-chart-shell">
+<span class="binary-chart-edge top" id="binary-chart-max">--</span>
+<svg aria-label="バイナリシミュレーションの価格グラフ" class="binary-chart" data-i18n="binaryChartAria" data-i18n-attr="aria-label" id="binary-chart" preserveaspectratio="none" role="img" viewbox="0 0 100 32">
+<defs>
+<lineargradient id="binary-chart-gradient" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#5fa9ff"></stop>
+<stop offset="55%" stop-color="#84f1ff"></stop>
+<stop offset="100%" stop-color="#ffe3a3"></stop>
+</lineargradient>
+</defs>
+<path class="binary-chart-guide" d="M 0 6 H 100 M 0 16 H 100 M 0 26 H 100"></path>
+<path class="binary-chart-future" d="" id="binary-chart-future"></path>
+<path class="binary-chart-path" d="" id="binary-chart-path"></path>
+<line class="binary-chart-progress" id="binary-chart-progress" x1="0" x2="0" y1="2" y2="30"></line>
+<circle class="binary-chart-point" cx="0" cy="0" id="binary-chart-point" r="1.25"></circle>
+</svg>
+<div class="binary-chart-overlay" id="binary-chart-overlay" data-phase="idle">
+<div class="binary-chart-timer" id="binary-chart-timer">--</div>
+<div class="binary-chart-actions">
+<button class="button button-binary-up" data-i18n="binaryActionUp" id="binary-up-button" type="button">上がる</button>
+<button class="button button-binary-down" data-i18n="binaryActionDown" id="binary-down-button" type="button">下がる</button>
+</div>
+</div>
+<span class="binary-chart-edge bottom" id="binary-chart-min">--</span>
+</div>
+<div class="binary-chart-meta">
+<strong id="binary-chart-now">--</strong>
+<span id="binary-chart-range">--</span>
+</div>
+<div class="binary-chart-axis">
+<span data-binary-chart-tick="">--:--</span>
+<span data-binary-chart-tick="">--:--</span>
+<span data-binary-chart-tick="">--:--</span>
+<span data-binary-chart-tick="">--:--</span>
+</div>
+</article>
+<div class="binary-columns">
+<article class="binary-list-card">
+<div class="binary-card-head">
+<span class="panel-label" data-i18n="binaryOpenLabel">OPEN</span>
+<h3 data-i18n="binaryOpenTitle">進行中ポジション</h3>
+</div>
+<ul class="binary-list" id="binary-open-list"></ul>
+</article>
+<article class="binary-list-card">
+<div class="binary-card-head">
+<span class="panel-label" data-i18n="binaryHistoryLabel">HISTORY</span>
+<h3 data-i18n="binaryHistoryTitle">直近の結果</h3>
+</div>
+<ul class="binary-list" id="binary-history-list"></ul>
+</article>
+</div>
+</section>
+<section class="fishing-panel" hidden="" id="fishing-panel">
+<div class="fishing-grid">
+<article class="fishing-card fishing-sonar-card">
+<div class="binary-card-head">
+<span class="panel-label" data-i18n="fishingPanelLabel">SONAR</span>
+<h3 data-i18n="fishingPanelTitle">魚群探知</h3>
+</div>
+<p class="fishing-panel-copy" id="fishing-panel-copy">
+                    ソナーを走らせて最初の魚群反応を探してください。
+                  </p>
+<div aria-label="漁業シミュレーションのソナー画面" class="sonar-stage" data-i18n="fishingPanelAria" data-i18n-attr="aria-label" id="fishing-sonar-stage" role="img">
+<span class="sonar-grid ring-a"></span>
+<span class="sonar-grid ring-b"></span>
+<span class="sonar-grid ring-c"></span>
+<span class="sonar-grid ring-d"></span>
+<span class="sonar-crosshair horizontal"></span>
+<span class="sonar-crosshair vertical"></span>
+<span class="sonar-sweep"></span>
+<div class="sonar-blips" id="fishing-sonar-blips"></div>
+<span class="sonar-core"></span>
+</div>
+<div class="fishing-target-summary">
+<strong id="fishing-target-title">まだ魚群は見つかっていません。</strong>
+<span id="fishing-target-meta">ソナーで海域を走査して魚群反応を探す。</span>
+</div>
+</article>
+<article class="fishing-card">
+<div class="binary-card-head">
+<span class="panel-label" data-i18n="fishingSignalScaleLabel">SIGNAL SCALE</span>
+<h3 data-i18n="fishingSignalScaleTitle">魚群の見え方 5段階</h3>
+</div>
+<ol class="fishing-signal-scale" id="fishing-signal-scale"></ol>
+</article>
+</div>
+<article class="fishing-card fishing-log-card">
+<div class="binary-card-head">
+<span class="panel-label" data-i18n="fishingLogLabel">SCAN LOG</span>
+<h3 data-i18n="fishingLogTitle">直近の探知</h3>
+</div>
+<ul class="binary-list fishing-log-list" id="fishing-log-list"></ul>
+</article>
+</section>
+<section class="planet-panel" hidden="" id="planet-panel">
+<ol aria-label="宇宙史タイムライン" class="planet-timeline" data-i18n="planetTimelineAria" data-i18n-attr="aria-label" id="planet-timeline">
+<li class="planet-timeline-step is-active" data-step="0"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep0">インフレ</span></li>
+<li class="planet-timeline-step" data-step="1"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep1">星と銀河</span></li>
+<li class="planet-timeline-step" data-step="2"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep2">超新星</span></li>
+<li class="planet-timeline-step" data-step="3"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep3">太陽系</span></li>
+<li class="planet-timeline-step" data-step="4"><span class="planet-timeline-dot"></span><span class="planet-timeline-label" data-i18n="planetTimelineStep4">地球</span></li>
+</ol>
+<div class="planet-era">
+<span class="planet-era-clock" id="planet-era-clock">10⁻³⁶ 秒</span>
+<span class="planet-era-name" id="planet-era-name">インフレーションと素粒子</span>
+</div>
+<p class="planet-hint" data-i18n="planetHintInflation" id="planet-hint">クリックで光の粒を撒いて宇宙の種をつくる。</p>
+<div class="planet-stage">
+<canvas class="planet-canvas" id="planet-canvas"></canvas>
+<div class="planet-overlay" hidden="" id="planet-overlay">
+<strong id="planet-overlay-title"></strong>
+<span id="planet-overlay-body"></span>
+</div>
+<div class="planet-victory" hidden="" id="planet-victory">
+<strong data-i18n="planetVictoryTitle">地球誕生</strong>
+<span data-i18n="planetVictorySub">生命が宿る惑星が安定しました。</span>
+</div>
+</div>
+</section>
+<section class="mgmt-panel" hidden="" id="mgmt-panel">
+<div class="mgmt-trade-grid">
+<article class="mgmt-card">
+<div class="binary-card-head">
+<span class="panel-label" data-i18n="mgmtStockLabel">STOCK</span>
+<h3 data-i18n="mgmtStockTitle">在庫補充</h3>
+</div>
+<ul class="mgmt-item-list" id="mgmt-stock-list"></ul>
+</article>
+<article class="mgmt-card">
+<div class="binary-card-head">
+<span class="panel-label" data-i18n="mgmtMenuLabel">MENU</span>
+<h3 data-i18n="mgmtMenuTitle">商品一覧</h3>
+</div>
+<ul class="mgmt-item-list" id="mgmt-menu-list"></ul>
+</article>
+</div>
+<article class="mgmt-card mgmt-log-card">
+<div class="binary-card-head">
+<span class="panel-label" data-i18n="mgmtLogLabel">LOG</span>
+<h3 data-i18n="mgmtLogTitle">営業記録</h3>
+</div>
+<ul class="binary-list" id="mgmt-log-list"></ul>
+</article>
+</section>
+<section class="solitaire-panel" hidden="" id="solitaire-panel">
+<div class="solitaire-top-row">
+<div class="solitaire-stock-area">
+<div class="solitaire-pile" id="solitaire-stock-pile"></div>
+<div class="solitaire-pile" id="solitaire-waste-pile"></div>
+</div>
+<div class="solitaire-foundations" id="solitaire-foundations"></div>
+</div>
+<div class="solitaire-tableau" id="solitaire-tableau"></div>
+<p class="solitaire-win-message" hidden="" id="solitaire-win-message"></p>
+</section>
+</div>
+</section>
+</section>
+<section class="hero" id="motion">
+<div class="hero-scene fade-rise">
+<div class="scene-card">
+<div class="scene-meta">
+<div class="scene-badge" data-i18n="sceneBadge">FREE ROTATION</div>
+<div class="scene-note" data-i18n="sceneNote">drag / swipe / spin</div>
+</div>
+<div aria-label="SEETON の 3D ロゴ" class="orbit-stage" data-i18n="orbitAria" data-i18n-attr="aria-label" id="orbit-stage" role="img">
+<span aria-hidden="true" class="logo-fallback">SEETON</span>
+<canvas id="seeton-canvas"></canvas>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="site-footer">
+<div>
+<p class="panel-label" data-i18n="footerLabel">SEETONA</p>
+<p class="footer-title" data-i18n="footerTitle">ロゴ、ゲーム棚、実際に遊べる画面を一つにまとめたホーム。</p>
+</div>
+<a class="footer-link" data-i18n="footerLink" href="#top">先頭へ戻る</a></footer>
+</div>
+<script src="/static/app.js?v=20260824a" type="module"></script>
+<script src="https://cache1.value-domain.com/xa.j?site=setn.s323.xrea.com" type="text/javascript"></script>
+</body>
+</html>

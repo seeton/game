@@ -390,7 +390,26 @@ main {
   cursor: grabbing;
 }
 
+.logo-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  font-size: clamp(3rem, 12vw, 7rem);
+  font-weight: 800;
+  letter-spacing: -0.07em;
+  transition: opacity 160ms ease;
+}
+
+.orbit-stage.has-logo .logo-fallback {
+  opacity: 0;
+}
+
 .orbit-stage canvas {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;

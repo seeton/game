@@ -491,7 +491,7 @@ def application(environ, start_response):
 
     trimmed_path = path.strip("/")
     if trimmed_path in GAME_URL_NAMES:
-        return serve_static_file(start_response, "index.html")
+        return serve_static_file(start_response, "game.html")
 
     root_asset = path.lstrip("/")
     if "/" not in root_asset:

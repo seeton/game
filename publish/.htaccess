@@ -11,10 +11,14 @@ RewriteCond %{REQUEST_URI} ^/app\.xcg$ [NC]
 RewriteCond %{QUERY_STRING} ^$
 RewriteRule ^app\.xcg$ /index.html [R=302,L]
 
-# Pretty per-game URLs (e.g. /minesweeper/, /binary/) load the SPA shell.
-RewriteRule ^(minesweeper|binary|planet|management|fishing|solitaire)/?$ /index.html [L]
+# Existing in-page games share one shell; /rogue/ remains its own app directory.
+RewriteRule ^(minesweeper|binary|planet|management|fishing|solitaire)/?$ /game.html [L]
 
 DirectoryIndex index.html app.xcg
+
+<IfModule mod_mime.c>
+  AddType image/avif .avif
+</IfModule>
 
 <IfModule mod_headers.c>
   Header always setifempty Content-Security-Policy "default-src 'self'; script-src 'self' https: 'unsafe-inline' 'sha256-tgYHzF47b8yBol70Z4bTIkDVsojhKxUq+nAFxrsdY/Q='; style-src 'self' https: 'unsafe-inline'; font-src 'self' https: data:; connect-src 'self' https:; img-src 'self' https: data: blob:; frame-src https:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
@@ -24,7 +28,7 @@ DirectoryIndex index.html app.xcg
   Header always setifempty Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), autoplay=()"
 </IfModule>
 
-<FilesMatch "^(README\.md|Dockerfile|app\.py|app_core\.py|minesweeper\.py|__init__\.py)$">
+<FilesMatch "^(README\.md|Dockerfile|app\.py|app_core\.py|binary_sim\.py|minesweeper\.py|__init__\.py)$">
   Require all denied
   <IfModule !mod_authz_core.c>
     Deny from all

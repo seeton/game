@@ -10,3 +10,4 @@ publish/runtime/sessions/*.json
 publish/runtime/binary_sessions/*.json
 publish.zip
 scripts/_trace_planet.mjs
+tmp/
