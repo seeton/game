@@ -269,9 +269,15 @@ body {
 .christmas-intro__bells,
 .christmas-intro__flight,
 .christmas-intro__snow,
-.space-intro__galaxy,
-.space-intro__depth,
-.jackpot-intro__machine {
+.space-intro__moon,
+.space-intro__shadow,
+.space-intro__dust,
+.space-intro__landing,
+.space-intro__plume,
+.space-intro__rocket,
+.jackpot-intro__machine,
+.jackpot-intro__party,
+.jackpot-intro__cracker {
   position: absolute;
   pointer-events: none;
   will-change: transform, opacity, filter;
@@ -363,50 +369,109 @@ body {
   display: none;
 }
 
-.space-intro__galaxy {
-  inset: -14%;
+.space-intro__moon {
+  inset: 0;
   z-index: 0;
-  background-position: center;
+  background-position: center 56%;
   background-repeat: no-repeat;
   background-size: cover;
-  filter: saturate(0.82) contrast(1.06) brightness(0.76);
-  animation: space-galaxy-flight var(--intro-duration, 2s) cubic-bezier(0.2, 0.72, 0.12, 1) both;
+  animation: space-moon-stage var(--intro-duration, 2s) ease-out both;
 }
 
-.street-intro[data-intro-theme="space"] .space-intro__galaxy {
-  background-image: url("./intro/space-milky-way-v4.jpg");
+.street-intro[data-intro-theme="space"] .space-intro__moon {
+  background-image: url("./intro/space-moon-stage-v5.jpg");
 }
 
-.space-intro__depth {
-  inset: -24%;
+.space-intro__landing {
+  bottom: clamp(90px, 17vh, 180px);
+  left: 68%;
+  z-index: 4;
+  width: clamp(100px, 11vw, 170px);
+  aspect-ratio: 2 / 3;
+  transform-origin: 50% 100%;
+  animation: space-rocket-landing var(--intro-duration, 2s) linear both;
+}
+
+.space-intro__rocket {
+  inset: 0;
   z-index: 2;
+  background: url("./intro/space-rocket-v1.png") center / contain no-repeat;
+  filter: drop-shadow(0 14px 13px rgba(0, 0, 0, 0.34));
+}
+
+.space-intro__plume {
+  top: 70%;
+  left: 50%;
+  z-index: 1;
+  width: 34%;
+  height: 48%;
   background:
-    radial-gradient(circle at 50% 50%, transparent 0 22%, rgba(143, 164, 176, 0.075) 34%, transparent 51%),
-    radial-gradient(circle at 50% 50%, transparent 0 32%, rgba(113, 103, 129, 0.06) 47%, transparent 65%);
+    radial-gradient(ellipse at 50% 7%, rgba(255, 250, 231, 0.9), rgba(206, 168, 112, 0.42) 32%, transparent 70%),
+    linear-gradient(rgba(230, 210, 174, 0.44), transparent 72%);
+  clip-path: polygon(35% 0, 65% 0, 100% 100%, 0 100%);
   mix-blend-mode: screen;
-  animation: space-depth-pulse var(--intro-duration, 2s) ease-out both;
+  transform: translateX(-50%);
+  transform-origin: 50% 0;
+  animation: space-rocket-plume var(--intro-duration, 2s) ease-out both;
+}
+
+.space-intro__shadow {
+  bottom: clamp(70px, 14.5vh, 155px);
+  left: 68%;
+  z-index: 2;
+  width: clamp(100px, 12vw, 184px);
+  height: clamp(18px, 2.5vw, 38px);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(4, 6, 9, 0.54), rgba(4, 6, 9, 0.16) 48%, transparent 74%);
+  transform-origin: center;
+  animation: space-landing-shadow var(--intro-duration, 2s) ease-out both;
+}
+
+.space-intro__dust {
+  bottom: clamp(58px, 12.5vh, 132px);
+  left: 68%;
+  z-index: 3;
+  width: clamp(210px, 28vw, 440px);
+  height: clamp(58px, 7vw, 104px);
+  background:
+    radial-gradient(ellipse at 30% 66%, rgba(183, 179, 169, 0.34), transparent 56%),
+    radial-gradient(ellipse at 70% 66%, rgba(220, 216, 205, 0.28), transparent 58%);
+  transform-origin: 50% 80%;
+  animation: space-landing-dust var(--intro-duration, 2s) ease-out both;
 }
 
 .street-intro[data-intro-theme="space"] .street-intro__lockup {
-  z-index: 4;
-  transform: none;
+  z-index: 5;
+  transform: translate(-14vw, -3vh);
 }
 
 .street-intro[data-intro-theme="space"] .street-intro__paint {
   display: none;
 }
 
+.street-intro[data-intro-theme="space"]::after {
+  opacity: 0.045;
+  animation: none;
+}
+
 .street-intro[data-intro-theme="space"] .street-intro__kicker {
   border: 1px solid rgba(184, 198, 207, 0.26);
   box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.62);
   font-weight: 650;
+  animation-name: space-intro-kicker;
 }
 
 .street-intro[data-intro-theme="space"] .street-intro__word {
-  letter-spacing: -0.045em;
-  text-shadow: 0 0.04em 0 #1e2a34, 0 0.09em 0.2em rgba(0, 0, 0, 0.5);
+  font-size: clamp(3.8rem, 10vw, 10rem);
+  letter-spacing: 0.01em;
+  text-shadow: 0 0.035em 0 #1e2a34, 0 0.075em 0.16em rgba(0, 0, 0, 0.48);
   -webkit-text-stroke: clamp(1px, 0.12vw, 2px) #202a32;
   animation-name: space-intro-word;
+}
+
+.street-intro[data-intro-theme="space"] .street-intro__rule {
+  width: min(44vw, 560px);
+  animation-name: space-intro-rule;
 }
 
 .street-intro[data-intro-theme="jackpot"] .street-intro__lockup {
@@ -499,12 +564,12 @@ body {
   gap: clamp(5px, 0.9vw, 14px);
   width: 66%;
   height: 66%;
-  animation: jackpot-reels-exit var(--intro-duration, 5s) ease-in both;
 }
 
 .jackpot-intro__reel {
   position: relative;
   overflow: hidden;
+  contain: paint;
   border: clamp(3px, 0.4vw, 7px) solid #8f7343;
   border-radius: clamp(7px, 1vw, 16px);
   background: linear-gradient(#eee8da, #cdbf9f 48%, #e8e0cf);
@@ -534,32 +599,67 @@ body {
   background: linear-gradient(transparent, rgba(60, 0, 0, 0.55));
 }
 
+.jackpot-intro__reel:nth-child(1) {
+  --spin-time: 1.45s;
+  --fast-y: -71.428571%;
+  --over-y: -86.285714%;
+  --stop-y: -85.714286%;
+}
+
+.jackpot-intro__reel:nth-child(2) {
+  --spin-time: 1.95s;
+  --fast-y: -77.777778%;
+  --over-y: -89.333333%;
+  --stop-y: -88.888889%;
+}
+
+.jackpot-intro__reel:nth-child(3) {
+  --spin-time: 2.45s;
+  --fast-y: -81.818182%;
+  --over-y: -91.272727%;
+  --stop-y: -90.909091%;
+}
+
 .jackpot-intro__belt {
   position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  height: 800%;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: grid;
   color: #67221f;
   font-family: Impact, "Arial Black", sans-serif;
   font-size: clamp(2.8rem, 8vw, 7.2rem);
   font-weight: 900;
   line-height: 1;
   text-shadow: 0 1px 0 #f2ead8;
-  animation: jackpot-reel-spin 280ms linear infinite;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.jackpot-intro__reel:nth-child(1) .jackpot-intro__belt {
+  height: 2100%;
+  grid-template-rows: repeat(21, minmax(0, 1fr));
 }
 
 .jackpot-intro__reel:nth-child(2) .jackpot-intro__belt {
-  animation-delay: -90ms;
+  height: 2700%;
+  grid-template-rows: repeat(27, minmax(0, 1fr));
 }
 
 .jackpot-intro__reel:nth-child(3) .jackpot-intro__belt {
-  animation-delay: -180ms;
+  height: 3300%;
+  grid-template-rows: repeat(33, minmax(0, 1fr));
+}
+
+.street-intro-active
+.street-intro[data-intro-theme="jackpot"]
+.jackpot-intro__belt {
+  animation: jackpot-reel-land var(--spin-time) linear 0.45s 1 both;
 }
 
 .jackpot-intro__belt span {
   display: grid;
-  flex: 0 0 12.5%;
+  min-height: 0;
   place-items: center;
 }
 
@@ -567,78 +667,39 @@ body {
   color: #465761;
 }
 
-.jackpot-intro__seven {
+.jackpot-intro__party {
+  inset: 0;
+  z-index: 7;
+  overflow: hidden;
+}
+
+.jackpot-intro__cracker {
+  bottom: -8%;
+  z-index: 1;
+  width: min(38vw, 560px);
+  aspect-ratio: 1;
+  opacity: 0;
+  animation: jackpot-party-cracker var(--intro-duration, 5s) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.jackpot-intro__cracker::before {
   position: absolute;
   inset: 0;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  color: #7b211e;
-  background: radial-gradient(circle, #eee7d8 0 35%, #cdbd99 70%, #71312a 145%);
-  font-family: Impact, "Arial Black", sans-serif;
-  font-size: clamp(4rem, 10.5vw, 10rem);
-  font-style: italic;
-  font-weight: 900;
-  line-height: 0.8;
-  text-shadow:
-    0 0.035em 0 #35110f,
-    0 0.075em 0 #f0e8d7;
-  -webkit-text-stroke: clamp(2px, 0.28vw, 5px) #4f1a17;
-  paint-order: stroke fill;
-  opacity: 0;
+  content: "";
+  background: url("./intro/jackpot-party-cracker-v1.png") center / contain no-repeat;
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.32));
 }
 
-.jackpot-intro__reel:nth-child(1) .jackpot-intro__seven {
-  animation: jackpot-seven-first var(--intro-duration, 5s) cubic-bezier(0.16, 1, 0.3, 1) both;
+.jackpot-intro__cracker--left {
+  left: -4%;
 }
 
-.jackpot-intro__reel:nth-child(2) .jackpot-intro__seven {
-  animation: jackpot-seven-second var(--intro-duration, 5s) cubic-bezier(0.16, 1, 0.3, 1) both;
+.jackpot-intro__cracker--right {
+  right: -4%;
 }
 
-.jackpot-intro__reel:nth-child(3) .jackpot-intro__seven {
-  animation: jackpot-seven-third var(--intro-duration, 5s) cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.jackpot-intro__win,
-.jackpot-intro__seeton {
-  position: absolute;
-  left: 50%;
-  z-index: 7;
-  display: block;
-  width: 100%;
-  text-align: center;
-  transform-origin: center;
-}
-
-.jackpot-intro__win {
-  top: 18%;
-  color: #ddc99e;
-  font-family: Impact, "Arial Black", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-  font-size: clamp(3rem, 9.5vw, 8.5rem);
-  font-weight: 900;
-  letter-spacing: -0.08em;
-  line-height: 0.82;
-  text-shadow:
-    0 0.055em 0 #35100e,
-    0 0.1em 0.14em rgba(0, 0, 0, 0.44);
-  -webkit-text-stroke: clamp(2px, 0.3vw, 5px) #4a201b;
-  paint-order: stroke fill;
-  animation: jackpot-win var(--intro-duration, 5s) cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.jackpot-intro__seeton {
-  top: 65%;
-  color: #eee7d8;
-  font-family: Impact, "Arial Black", sans-serif;
-  font-size: clamp(1.6rem, 4.8vw, 4.6rem);
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  text-shadow: 0 0.04em 0 #331411, 0 0.09em 0.12em rgba(0, 0, 0, 0.48);
-  -webkit-text-stroke: clamp(1px, 0.16vw, 3px) #43201b;
-  paint-order: stroke fill;
-  animation: jackpot-seeton var(--intro-duration, 5s) cubic-bezier(0.16, 1, 0.3, 1) both;
+.jackpot-intro__cracker--right::before {
+  transform: scaleX(-1);
 }
 
 @keyframes street-intro-curtain {
@@ -1039,107 +1100,203 @@ body {
   }
 }
 
-@keyframes space-intro-paint {
+@keyframes space-moon-stage {
   0% {
     opacity: 0;
-    transform: scale(0.2) rotate(8deg);
+    transform: scale(1.025);
+  }
+
+  8%,
+  82% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.012);
+  }
+}
+
+@keyframes space-rocket-landing {
+  0%,
+  6% {
+    opacity: 0;
+    transform: translate3d(-50%, -74vh, 0) scale(0.72) rotate(1.5deg);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  46% {
+    opacity: 1;
+    transform: translate3d(-50%, -24vh, 0) scale(0.88) rotate(-0.45deg);
+  }
+
+  57% {
+    transform: translate3d(-50%, -7vh, 0) scale(0.96) rotate(0.2deg);
+  }
+
+  64% {
+    transform: translate3d(-50%, 0, 0) scale(1) rotate(0);
+  }
+
+  68% {
+    transform: translate3d(-50%, -1.1vh, 0) scale(1) rotate(0);
+  }
+
+  74%,
+  92% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1) rotate(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, 0, 0) scale(1) rotate(0);
+  }
+}
+
+@keyframes space-rocket-plume {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(0.35);
   }
 
   14% {
-    opacity: 0.96;
-  }
-
-  54% {
-    opacity: 1;
-    transform: scale(1.18) rotate(0);
-  }
-
-  78% {
-    opacity: 0.94;
-    transform: scale(1.76) rotate(-1deg);
-  }
-
-  100% {
-    opacity: 0;
-    transform: scale(3.1) rotate(-3deg);
-  }
-}
-
-@keyframes space-galaxy-flight {
-  0% {
-    opacity: 0;
-    filter: saturate(0.72) contrast(1.08) brightness(0.54);
-    transform: scale(0.82) rotate(-2deg);
-  }
-
-  16% {
-    opacity: 1;
-  }
-
-  60% {
-    filter: saturate(0.88) contrast(1.06) brightness(0.82);
-    transform: scale(1.05) rotate(-0.4deg);
-  }
-
-  80% {
-    opacity: 1;
-    transform: scale(1.13) rotate(0.3deg);
-  }
-
-  100% {
-    opacity: 0;
-    filter: saturate(0.82) contrast(1.06) brightness(0.72);
-    transform: scale(1.28) rotate(0.8deg);
-  }
-}
-
-@keyframes space-depth-pulse {
-  0%,
-  12% {
-    opacity: 0;
-    transform: scale(0.16);
-  }
-
-  42% {
     opacity: 0.86;
+    transform: translateX(-50%) scaleY(1.15);
   }
 
-  82% {
+  46% {
+    opacity: 0.9;
+    transform: translateX(-50%) scaleY(0.9);
+  }
+
+  57% {
+    opacity: 0.62;
+    transform: translateX(-50%) scaleY(0.5);
+  }
+
+  64%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(0.18);
+  }
+}
+
+@keyframes space-landing-shadow {
+  0%,
+  22% {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.2);
+  }
+
+  46% {
+    opacity: 0.12;
+    transform: translateX(-50%) scaleX(0.45);
+  }
+
+  64% {
     opacity: 0.48;
-    transform: scale(1.24);
+    transform: translateX(-50%) scaleX(1);
+  }
+
+  68%,
+  92% {
+    opacity: 0.32;
+    transform: translateX(-50%) scaleX(0.94);
   }
 
   100% {
     opacity: 0;
-    transform: scale(2.1);
+    transform: translateX(-50%) scaleX(0.94);
+  }
+}
+
+@keyframes space-landing-dust {
+  0%,
+  55% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.35, 0.18);
+  }
+
+  64% {
+    opacity: 0.56;
+    transform: translateX(-50%) scale(0.75, 0.46);
+  }
+
+  72% {
+    opacity: 0.42;
+    transform: translateX(-50%) scale(1.35, 0.78);
+  }
+
+  88%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(2, 1.1);
+  }
+}
+
+@keyframes space-intro-kicker {
+  0%,
+  7% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  11%,
+  34% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  44%,
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
   }
 }
 
 @keyframes space-intro-word {
   0%,
-  8% {
+  5% {
     opacity: 0;
-    transform: translate3d(0, 0, -900px) scale(0.04) rotate(10deg);
+    transform: translateY(12px) scale(0.98);
   }
 
-  32% {
+  10%,
+  34% {
     opacity: 1;
-    transform: translate3d(0, 0, 80px) scale(1.12) rotate(-1deg);
+    transform: translateY(0) scale(1);
   }
 
-  44% {
-    transform: translate3d(0, 0, 0) scale(0.97) rotate(0.4deg);
-  }
-
-  54%,
-  78% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1) rotate(0);
-  }
-
+  46%,
   100% {
     opacity: 0;
-    transform: translate3d(0, 0, 280px) scale(2.6) rotate(-2deg);
+    transform: translateY(-8px) scale(1);
+  }
+}
+
+@keyframes space-intro-rule {
+  0%,
+  10% {
+    opacity: 0;
+    transform: scaleX(0) skewX(-20deg);
+  }
+
+  16%,
+  34% {
+    opacity: 0.82;
+    transform: scaleX(1) skewX(-20deg);
+  }
+
+  46%,
+  100% {
+    opacity: 0;
+    transform: scaleX(0.35) skewX(-20deg);
   }
 }
 
@@ -1200,45 +1357,45 @@ body {
   }
 
   13%,
-  27% {
+  37% {
     filter: brightness(1);
     transform: translate(-50%, -50%) scale(1) rotate(0);
   }
 
-  28% {
+  38% {
     filter: brightness(1.32);
     transform: translate(calc(-50% - 6px), calc(-50% + 2px)) scale(1.015) rotate(-0.35deg);
   }
 
-  30%,
-  39% {
+  40%,
+  47% {
     filter: brightness(1);
     transform: translate(-50%, -50%) scale(1) rotate(0);
   }
 
-  40% {
+  48% {
     filter: brightness(1.35);
     transform: translate(calc(-50% + 7px), calc(-50% - 2px)) scale(1.018) rotate(0.35deg);
   }
 
-  42%,
-  51% {
+  50%,
+  57% {
     filter: brightness(1);
     transform: translate(-50%, -50%) scale(1) rotate(0);
   }
 
-  52% {
+  58% {
     filter: brightness(1.55);
     transform: translate(calc(-50% - 8px), calc(-50% + 3px)) scale(1.026) rotate(-0.45deg);
   }
 
-  55%,
-  63% {
+  61%,
+  65% {
     filter: brightness(1.08);
     transform: translate(-50%, -50%) scale(1) rotate(0);
   }
 
-  65% {
+  68% {
     filter: brightness(1.18) saturate(0.94);
     transform: translate(-50%, -50%) scale(1.06) rotate(0);
   }
@@ -1259,27 +1416,22 @@ body {
 
 @keyframes jackpot-display-flash {
   0%,
-  50% {
+  56% {
     opacity: 0;
     transform: scale(0.5);
   }
 
-  53% {
+  59% {
     opacity: 1;
     transform: scale(1.2);
   }
 
-  59% {
+  63% {
     opacity: 0.18;
     transform: scale(1.7);
   }
 
-  64% {
-    opacity: 1;
-    transform: scale(0.8);
-  }
-
-  71%,
+  70%,
   100% {
     opacity: 0;
     transform: scale(2.1);
@@ -1288,19 +1440,11 @@ body {
 
 @keyframes jackpot-glass-sweep {
   0%,
-  18% {
+  14% {
     transform: translateX(-130%);
   }
 
-  28% {
-    transform: translateX(130%);
-  }
-
-  51% {
-    transform: translateX(-130%);
-  }
-
-  61%,
+  24%,
   100% {
     transform: translateX(130%);
   }
@@ -1335,136 +1479,49 @@ body {
   }
 }
 
-@keyframes jackpot-reel-spin {
-  from {
-    transform: translateY(0);
+@keyframes jackpot-reel-land {
+  0% {
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: linear;
   }
 
-  to {
-    transform: translateY(-87.5%);
-  }
-}
-
-@keyframes jackpot-reels-exit {
-  0%,
-  61% {
-    opacity: 1;
-    transform: scale(1);
+  68% {
+    transform: translate3d(0, var(--fast-y), 0);
+    animation-timing-function: cubic-bezier(0.12, 0.62, 0.2, 1);
   }
 
-  66%,
-  100% {
-    opacity: 0;
-    transform: scale(1.24);
-  }
-}
-
-@keyframes jackpot-seven-first {
-  0%,
-  27% {
-    opacity: 0;
-    transform: translateY(-38%) scaleY(1.5);
-  }
-
-  28% {
-    opacity: 1;
-    transform: translateY(0) scale(1.38, 0.72);
-  }
-
-  31%,
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes jackpot-seven-second {
-  0%,
-  39% {
-    opacity: 0;
-    transform: translateY(-38%) scaleY(1.5);
-  }
-
-  40% {
-    opacity: 1;
-    transform: translateY(0) scale(1.38, 0.72);
-  }
-
-  43%,
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes jackpot-seven-third {
-  0%,
-  51% {
-    opacity: 0;
-    transform: translateY(-38%) scaleY(1.5);
-  }
-
-  52% {
-    opacity: 1;
-    transform: translateY(0) scale(1.38, 0.72);
-  }
-
-  55%,
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes jackpot-win {
-  0%,
-  62% {
-    opacity: 0;
-    transform: translateX(-50%) scale(3.4) rotate(-7deg);
-  }
-
-  65% {
-    opacity: 1;
-    transform: translateX(-50%) scale(0.8) rotate(2deg);
-  }
-
-  69% {
-    transform: translateX(-50%) scale(1.18) rotate(-1deg);
-  }
-
-  73%,
-  91% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1) rotate(0);
+  94% {
+    transform: translate3d(0, var(--over-y), 0);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
   }
 
   100% {
-    opacity: 0;
-    transform: translateX(-50%) scale(1.42) rotate(2deg);
+    transform: translate3d(0, var(--stop-y), 0);
   }
 }
 
-@keyframes jackpot-seeton {
+@keyframes jackpot-party-cracker {
   0%,
-  69% {
+  66% {
     opacity: 0;
-    transform: translateX(-50%) translateY(4vh) scale(0.4);
+    transform: translateY(16%) scale(0.5) rotate(-4deg);
   }
 
-  73% {
+  70% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1.15);
+    transform: translateY(0) scale(1.12) rotate(1deg);
   }
 
-  78%,
-  91% {
+  74%,
+  87% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateY(0) scale(1) rotate(0);
   }
 
+  92%,
   100% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-2vh) scale(1.3);
+    transform: translateY(-4%) scale(1.08) rotate(1deg);
   }
 }
 
@@ -1842,12 +1899,55 @@ main {
     width: 112vw;
   }
 
-  .space-intro__galaxy {
-    inset: -10% -54%;
+  .space-intro__moon {
+    background-position: center 58%;
+  }
+
+  .space-intro__landing {
+    bottom: clamp(92px, 17vh, 150px);
+    left: 50%;
+    width: clamp(110px, 35vw, 145px);
+  }
+
+  .space-intro__shadow {
+    bottom: clamp(74px, 14.5vh, 126px);
+    left: 50%;
+    width: clamp(108px, 38vw, 156px);
+  }
+
+  .space-intro__dust {
+    bottom: clamp(62px, 12.5vh, 110px);
+    left: 50%;
+    width: 86vw;
+  }
+
+  .street-intro[data-intro-theme="space"] .street-intro__lockup {
+    transform: translateY(-19vh);
+  }
+
+  .street-intro[data-intro-theme="space"] .street-intro__word {
+    font-size: clamp(3.6rem, 18vw, 5.2rem);
+  }
+
+  .street-intro[data-intro-theme="space"] .street-intro__rule {
+    width: 70vw;
   }
 
   .jackpot-intro__machine {
     width: min(188vw, 820px);
+  }
+
+  .jackpot-intro__cracker {
+    bottom: -1%;
+    width: min(66vw, 286px);
+  }
+
+  .jackpot-intro__cracker--left {
+    left: -17%;
+  }
+
+  .jackpot-intro__cracker--right {
+    right: -17%;
   }
 
   .jackpot-intro__chance {

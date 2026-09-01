@@ -22,12 +22,12 @@
       kicker: "SANTA / REINDEER / BELLS",
     },
     space: {
-      assets: ["space-milky-way-v4.jpg"],
+      assets: ["space-moon-stage-v5.jpg", "space-rocket-v1.png"],
       durationMs: 2000,
-      kicker: "ENTERING / THE MILKY WAY",
+      kicker: "LUNAR DESCENT / TOUCHDOWN",
     },
     jackpot: {
-      assets: ["jackpot-machine-v4.png"],
+      assets: ["jackpot-machine-v4.png", "jackpot-party-cracker-v1.png"],
       durationMs: 5000,
       kicker: "SECRET / 1% / FEVER",
     },
@@ -79,7 +79,7 @@
           ? "image/jpeg"
           : "image/avif";
       preload.href = new URL(`./intro/${asset}`, currentScriptUrl).href;
-      preload.setAttribute("fetchpriority", index === 0 ? "high" : "auto");
+      preload.setAttribute("fetchpriority", selectedTheme === "space" || index === 0 ? "high" : "auto");
       document.head.appendChild(preload);
     });
   }

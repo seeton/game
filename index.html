@@ -6,8 +6,8 @@
   <meta name="robots" content="noindex,nofollow">
   <title>SEETON Intro PoC</title>
   <meta name="description" content="SEETONホームイントロのスマートフォン確認用PoC。">
-  <script src="./intro.js?v=20260901b"></script>
-  <link rel="stylesheet" href="./home.css?v=20260901b">
+  <script src="./intro.js?v=20260901c"></script>
+  <link rel="stylesheet" href="./home.css?v=20260901c">
   <style>
     .poc-shell {
       display: grid;
@@ -119,8 +119,13 @@
       <div class="christmas-intro__flight"></div>
     </div>
     <div class="intro-scene space-intro">
-      <div class="space-intro__galaxy"></div>
-      <div class="space-intro__depth"></div>
+      <div class="space-intro__moon"></div>
+      <div class="space-intro__shadow"></div>
+      <div class="space-intro__dust"></div>
+      <div class="space-intro__landing">
+        <div class="space-intro__plume"></div>
+        <div class="space-intro__rocket"></div>
+      </div>
     </div>
     <div class="intro-scene jackpot-intro">
       <div class="jackpot-intro__machine">
@@ -128,21 +133,20 @@
           <span class="jackpot-intro__chance">SECRET ・ 1% CHANCE</span>
           <div class="jackpot-intro__reels">
             <div class="jackpot-intro__reel">
-              <div class="jackpot-intro__belt"><span>3</span><span>★</span><span>7</span><span>♦</span><span>5</span><span>BAR</span><span>7</span><span>★</span></div>
-              <span class="jackpot-intro__seven">7</span>
+              <div class="jackpot-intro__belt"><span>3</span><span>★</span><span>7</span><span>♦</span><span>5</span><span>BAR</span><span>2</span><span>★</span><span>9</span><span>♦</span><span>4</span><span>BAR</span><span>6</span><span>★</span><span>1</span><span>♦</span><span>BAR</span><span>5</span><span class="jackpot-intro__target">7</span><span>★</span><span>3</span></div>
             </div>
             <div class="jackpot-intro__reel">
-              <div class="jackpot-intro__belt"><span>★</span><span>5</span><span>BAR</span><span>7</span><span>3</span><span>♦</span><span>7</span><span>★</span></div>
-              <span class="jackpot-intro__seven">7</span>
+              <div class="jackpot-intro__belt"><span>★</span><span>5</span><span>BAR</span><span>7</span><span>3</span><span>♦</span><span>8</span><span>BAR</span><span>2</span><span>★</span><span>6</span><span>♦</span><span>BAR</span><span>4</span><span>9</span><span>★</span><span>1</span><span>♦</span><span>BAR</span><span>8</span><span>3</span><span>★</span><span>5</span><span>BAR</span><span class="jackpot-intro__target">7</span><span>♦</span><span>2</span></div>
             </div>
             <div class="jackpot-intro__reel">
-              <div class="jackpot-intro__belt"><span>BAR</span><span>♦</span><span>3</span><span>★</span><span>7</span><span>5</span><span>7</span><span>★</span></div>
-              <span class="jackpot-intro__seven">7</span>
+              <div class="jackpot-intro__belt"><span>BAR</span><span>♦</span><span>3</span><span>★</span><span>7</span><span>5</span><span>9</span><span>BAR</span><span>2</span><span>♦</span><span>★</span><span>6</span><span>BAR</span><span>4</span><span>8</span><span>★</span><span>♦</span><span>1</span><span>BAR</span><span>9</span><span>5</span><span>★</span><span>3</span><span>♦</span><span>BAR</span><span>6</span><span>2</span><span>★</span><span>8</span><span>BAR</span><span class="jackpot-intro__target">7</span><span>♦</span><span>4</span></div>
             </div>
           </div>
-          <strong class="jackpot-intro__win">大当たり</strong>
-          <span class="jackpot-intro__seeton">SEETON</span>
         </div>
+      </div>
+      <div class="jackpot-intro__party">
+        <span class="jackpot-intro__cracker jackpot-intro__cracker--left"></span>
+        <span class="jackpot-intro__cracker jackpot-intro__cracker--right"></span>
       </div>
     </div>
     <div class="street-intro__lockup">
@@ -155,12 +159,12 @@
   <main class="poc-shell">
     <p class="poc-eyebrow">SEETON INTRO / MOBILE POC</p>
     <h1>4つの演出をスマホで確認</h1>
-    <p class="poc-lead">文字をぼかさず、STREET以外を静かな編集デザインと微縮模型の質感に更新しました。通常3種は2秒、SECRETだけ5秒です。</p>
+    <p class="poc-lead">文字をぼかさず、静かな編集デザインと微縮模型の質感で更新しました。通常3種は2秒、SECRETだけ5秒です。</p>
     <nav class="poc-grid" aria-label="イントロ演出一覧">
       <a class="poc-card" href="?intro=street"><strong>STREET</strong><span>スプレーアート / 2秒</span></a>
       <a class="poc-card" href="?intro=christmas"><strong>CHRISTMAS</strong><span>紙とフェルトの微縮模型 / 2秒</span></a>
-      <a class="poc-card" href="?intro=space"><strong>SPACE</strong><span>天の川・展示写真調 / 2秒</span></a>
-      <a class="poc-card" href="?intro=jackpot"><strong>SECRET</strong><span>真鍮筐体・777・大当たり / 5秒</span></a>
+      <a class="poc-card" href="?intro=space"><strong>SPACE</strong><span>ロケット月面着陸 / 2秒</span></a>
+      <a class="poc-card" href="?intro=jackpot"><strong>SECRET</strong><span>実リール777・クラッカー / 5秒</span></a>
     </nav>
     <a class="poc-cycle" href="./"><span>順番に再生</span><span aria-hidden="true">→</span></a>
     <p class="poc-note">このPoCでは確認しやすいよう順番表示と固定URLを有効化しています。本番のSECRET出現率は1%です。</p>
