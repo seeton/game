@@ -1138,15 +1138,7 @@ body {
     transform: translate3d(-50%, -7vh, 0) scale(0.96) rotate(0.2deg);
   }
 
-  64% {
-    transform: translate3d(-50%, 0, 0) scale(1) rotate(0);
-  }
-
-  68% {
-    transform: translate3d(-50%, -1.1vh, 0) scale(1) rotate(0);
-  }
-
-  74%,
+  64%,
   92% {
     opacity: 1;
     transform: translate3d(-50%, 0, 0) scale(1) rotate(0);
