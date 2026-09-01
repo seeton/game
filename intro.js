@@ -9,7 +9,7 @@
   const THEMES = ["street", "christmas", "space", "jackpot"];
   const NORMAL_THEMES = THEMES.slice(0, 3);
   const SECRET_CHANCE = 0.01;
-  const DEBUG_STORAGE_KEY = "seeton-intro-debug-index-v1";
+  const DEBUG_STORAGE_KEY = "seeton-intro-debug-index-v2";
   const THEME_CONFIG = {
     street: {
       assets: ["street-paint-v2.png"],
@@ -17,17 +17,17 @@
       kicker: "GAMES / CODE / EXPERIMENTS",
     },
     christmas: {
-      assets: ["christmas-stage-v3.png", "christmas-flight-v2.avif"],
+      assets: ["christmas-stage-v4.png", "christmas-flight-v3.png"],
       durationMs: 2000,
       kicker: "SANTA / REINDEER / BELLS",
     },
     space: {
-      assets: ["space-milky-way-v3.jpg", "space-paint-v2.png"],
+      assets: ["space-milky-way-v4.jpg"],
       durationMs: 2000,
       kicker: "ENTERING / THE MILKY WAY",
     },
     jackpot: {
-      assets: ["jackpot-machine-v3.png", "jackpot-paint-v2.png"],
+      assets: ["jackpot-machine-v4.png"],
       durationMs: 5000,
       kicker: "SECRET / 1% / FEVER",
     },
@@ -35,8 +35,10 @@
 
   const selectTheme = () => {
     const params = new URLSearchParams(window.location.search);
-    const isLocal = ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
-    const isPagesPoc = window.location.hostname === "seeton.github.io"
+    const hostname = window.location.hostname;
+    const isPrivateIpv4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname);
+    const isLocal = ["127.0.0.1", "localhost", "::1"].includes(hostname) || isPrivateIpv4;
+    const isPagesPoc = hostname === "seeton.github.io"
       && window.location.pathname.startsWith("/game/");
     const isDebug = isLocal || isPagesPoc;
     const forcedTheme = params.get("intro");
