@@ -1930,16 +1930,16 @@ main {
   }
 
   .jackpot-intro__cracker {
-    bottom: -1%;
-    width: min(66vw, 286px);
+    bottom: 6%;
+    width: min(82vw, 320px);
   }
 
   .jackpot-intro__cracker--left {
-    left: -17%;
+    left: -22%;
   }
 
   .jackpot-intro__cracker--right {
-    right: -17%;
+    right: -22%;
   }
 
   .jackpot-intro__chance {
