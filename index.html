@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>SEETON Intro PoC</title>
+  <meta name="description" content="SEETONホームイントロのスマートフォン確認用PoC。">
+  <script src="./intro.js?v=20260901a"></script>
+  <link rel="stylesheet" href="./home.css?v=20260901a">
+  <style>
+    .poc-shell {
+      display: grid;
+      align-content: center;
+      min-height: 100vh;
+      padding: 56px 0;
+    }
+
+    .poc-eyebrow {
+      margin: 0 0 14px;
+      color: #18e7ff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+    }
+
+    .poc-shell h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 10vw, 5.8rem);
+      letter-spacing: -0.06em;
+      line-height: 0.95;
+    }
+
+    .poc-lead {
+      max-width: 46rem;
+      margin: 24px 0 0;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .poc-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 36px;
+    }
+
+    .poc-card,
+    .poc-cycle {
+      border: 1px solid var(--line);
+      color: var(--foreground);
+      text-decoration: none;
+    }
+
+    .poc-card {
+      display: grid;
+      gap: 8px;
+      min-height: 118px;
+      padding: 22px;
+      background: #111113;
+    }
+
+    .poc-card strong {
+      font-size: 1.15rem;
+    }
+
+    .poc-card span,
+    .poc-note {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.6;
+    }
+
+    .poc-card:hover,
+    .poc-card:focus-visible,
+    .poc-cycle:hover,
+    .poc-cycle:focus-visible {
+      border-color: #eaff32;
+      outline: none;
+    }
+
+    .poc-cycle {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      margin-top: 12px;
+      padding: 18px 22px;
+      background: #eaff32;
+      color: #09090a;
+      font-weight: 800;
+    }
+
+    .poc-note {
+      margin: 20px 0 0;
+    }
+
+    @media (max-width: 560px) {
+      .poc-shell {
+        padding: 36px 0;
+      }
+
+      .poc-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .poc-card {
+        min-height: 96px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="street-intro" aria-hidden="true">
+    <div class="street-intro__paint"></div>
+    <div class="intro-scene christmas-intro">
+      <div class="christmas-intro__stage"></div>
+      <div class="christmas-intro__bells"></div>
+      <div class="christmas-intro__snow"></div>
+      <div class="christmas-intro__flight"></div>
+    </div>
+    <div class="intro-scene space-intro">
+      <div class="space-intro__galaxy"></div>
+      <div class="space-intro__depth"></div>
+    </div>
+    <div class="intro-scene jackpot-intro">
+      <div class="jackpot-intro__machine">
+        <div class="jackpot-intro__display">
+          <span class="jackpot-intro__chance">SECRET ・ 1% CHANCE</span>
+          <div class="jackpot-intro__reels">
+            <div class="jackpot-intro__reel">
+              <div class="jackpot-intro__belt"><span>3</span><span>★</span><span>7</span><span>♦</span><span>5</span><span>BAR</span><span>7</span><span>★</span></div>
+              <span class="jackpot-intro__seven">7</span>
+            </div>
+            <div class="jackpot-intro__reel">
+              <div class="jackpot-intro__belt"><span>★</span><span>5</span><span>BAR</span><span>7</span><span>3</span><span>♦</span><span>7</span><span>★</span></div>
+              <span class="jackpot-intro__seven">7</span>
+            </div>
+            <div class="jackpot-intro__reel">
+              <div class="jackpot-intro__belt"><span>BAR</span><span>♦</span><span>3</span><span>★</span><span>7</span><span>5</span><span>7</span><span>★</span></div>
+              <span class="jackpot-intro__seven">7</span>
+            </div>
+          </div>
+          <strong class="jackpot-intro__win">大当たり</strong>
+          <span class="jackpot-intro__seeton">SEETON</span>
+        </div>
+      </div>
+    </div>
+    <div class="street-intro__lockup">
+      <span class="street-intro__kicker" data-intro-kicker>GAMES / CODE / EXPERIMENTS</span>
+      <span class="street-intro__word" data-text="SEETON">SEETON</span>
+      <span class="street-intro__rule"></span>
+    </div>
+  </div>
+
+  <main class="poc-shell">
+    <p class="poc-eyebrow">SEETON INTRO / MOBILE POC</p>
+    <h1>4つの演出をスマホで確認</h1>
+    <p class="poc-lead">ボタンをタップすると演出を固定して再生します。通常3種は2秒、SECRETだけ5秒です。</p>
+    <nav class="poc-grid" aria-label="イントロ演出一覧">
+      <a class="poc-card" href="?intro=street"><strong>STREET</strong><span>スプレーアート / 2秒</span></a>
+      <a class="poc-card" href="?intro=christmas"><strong>CHRISTMAS</strong><span>サンタ・トナカイ・ツリー / 2秒</span></a>
+      <a class="poc-card" href="?intro=space"><strong>SPACE</strong><span>天の川・宇宙フレーム / 2秒</span></a>
+      <a class="poc-card" href="?intro=jackpot"><strong>SECRET</strong><span>777・大当たり / 5秒</span></a>
+    </nav>
+    <a class="poc-cycle" href="./"><span>順番に再生</span><span aria-hidden="true">→</span></a>
+    <p class="poc-note">このPoCでは確認しやすいよう順番表示と固定URLを有効化しています。本番のSECRET出現率は1%です。</p>
+  </main>
+</body>
+</html>
